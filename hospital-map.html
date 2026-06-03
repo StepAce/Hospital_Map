@@ -21,33 +21,44 @@
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: #1a1a2e;
+  }
+
   body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: linear-gradient(160deg, #E8F5E9 0%, #C8E6C9 40%, #B2DFDB 100%);
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    padding: 10px;
   }
 
   .app {
+    height: 100%;
     width: 100%;
-    max-width: 1000px;
+    max-width: none;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0;
   }
 
   header {
-    background: var(--white);
-    border-radius: 16px;
-    padding: 12px 22px;
-    box-shadow: var(--shadow);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 0 0 14px 14px;
+    padding: 8px 16px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.15);
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
   }
 
   header h1 {
@@ -96,38 +107,48 @@
   .legend-dot.blue { background: var(--blue); }
   .legend-dot.orange { background: #D7CCC8; border: 1.5px solid #8D6E63; }
 
-  .map-wrapper {
-    position: relative;
-    background: var(--white);
-    border-radius: 16px;
-    box-shadow: var(--shadow);
-    width: 100%;
-  }
-
   .main-content {
+    flex: 1;
     display: flex;
-    gap: 10px;
-    align-items: flex-start;
+    min-height: 0;
+    position: relative;
   }
 
   .map-column {
     flex: 1;
     min-width: 0;
+    min-height: 0;
+    position: relative;
+  }
+
+  .map-wrapper {
+    position: absolute;
+    inset: 0;
+    background: #1a1a2e;
+    border-radius: 0;
+    box-shadow: none;
   }
 
   .sidebar {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    top: 0;
+    z-index: 15;
     width: 290px;
     flex-shrink: 0;
-    background: var(--white);
-    border-radius: 14px;
-    box-shadow: var(--shadow);
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 0;
+    box-shadow: -2px 0 16px rgba(0,0,0,0.12);
     display: flex;
     flex-direction: column;
-    max-height: 550px;
+    max-height: none;
   }
 
   .sidebar-header {
-    padding: 11px 15px;
+    padding: 10px 15px;
     font-size: 14px;
     font-weight: 700;
     color: var(--dark);
@@ -142,6 +163,16 @@
     overflow-y: auto;
     flex: 1;
   }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: default;
+    touch-action: none;
+  }
+
+  canvas.pointer { cursor: crosshair; }
 
   .bld-table {
     width: 100%;
@@ -203,34 +234,23 @@
     line-height: 1.45;
   }
 
-  canvas {
-    display: block;
-    width: 100%;
-    height: auto;
-    aspect-ratio: 2016 / 864;
-    cursor: default;
-    touch-action: none;
-  }
-
-  canvas.pointer { cursor: crosshair; }
-
   .info-panel {
     position: absolute;
-    top: 0;
+    top: 50px;
     left: 0;
     right: 0;
-    min-height: 13vh;
-    max-height: 18vh;
+    min-height: auto;
+    max-height: none;
     background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.78) 100%);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    padding: 10px 14px;
+    padding: 8px 14px;
     display: flex;
     flex-direction: column;
     justify-content: center;
-    gap: 7px;
-    z-index: 5;
-    border-radius: 14px 14px 0 0;
+    gap: 6px;
+    z-index: 10;
+    border-radius: 0 0 12px 12px;
     border-bottom: 1px solid rgba(0,0,0,0.08);
     pointer-events: auto;
     animation: slideDown 0.35s ease-out;
@@ -336,7 +356,7 @@
 
   .selection-banner {
     position: absolute;
-    top: 14px;
+    top: 60px;
     left: 50%;
     transform: translateX(-50%);
     background: rgba(46,125,50,0.92);
@@ -348,7 +368,7 @@
     pointer-events: none;
     animation: pulse-banner 1.5s ease-in-out infinite;
     white-space: nowrap;
-    z-index: 2;
+    z-index: 12;
   }
 
   @keyframes pulse-banner {
@@ -357,6 +377,10 @@
   }
 
   .no-qr-info {
+    position: absolute;
+    top: 60px;
+    left: 12px;
+    right: 12px;
     background: #FFF3E0;
     border: 1.5px solid #FFB74D;
     border-radius: 14px;
@@ -369,6 +393,7 @@
     align-items: flex-start;
     gap: 10px;
     line-height: 1.5;
+    z-index: 12;
   }
 
   .no-qr-info .warn-icon {
@@ -378,6 +403,10 @@
   }
 
   .test-banner {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
     background: rgba(66,66,66,0.88);
     color: #E0E0E0;
     border-radius: 12px;
@@ -388,6 +417,7 @@
     align-items: center;
     gap: 10px;
     box-shadow: var(--shadow);
+    z-index: 12;
   }
 
   .test-banner .test-icon { font-size: 18px; flex-shrink: 0; }
@@ -417,6 +447,10 @@
   }
 
   .qr-info {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
     background: var(--white);
     border-radius: 14px;
     padding: 11px 18px;
@@ -428,15 +462,22 @@
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+    z-index: 12;
   }
 
   .qr-info .pin-icon { font-size: 18px; }
 
   .controls {
+    position: absolute;
+    bottom: 12px;
+    left: 0;
+    right: 0;
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
     justify-content: center;
+    z-index: 12;
+    pointer-events: none;
   }
 
   button {
@@ -466,10 +507,15 @@
   .btn-select-map {
     background: #5C6BC0;
     color: white;
+    pointer-events: auto;
   }
   .btn-select-map:hover { background: #3949AB; }
 
   .route-panel {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
     background: var(--white);
     border-radius: 14px;
     padding: 13px 18px;
@@ -480,6 +526,7 @@
     flex-wrap: wrap;
     gap: 10px;
     animation: slideUp 0.3s ease-out;
+    z-index: 12;
   }
 
   @keyframes slideUp {
@@ -515,41 +562,47 @@
   .hidden { display: none !important; }
 
   @media (max-width: 768px) {
-    .main-content { flex-direction: column; }
-    .sidebar { width: 100%; max-height: 320px; border-radius: 14px; }
+    .sidebar {
+      top: auto;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      max-height: 40vh;
+      border-radius: 16px 16px 0 0;
+    }
     .bld-table { font-size: 13px; }
     .bld-name { font-size: 13px; }
     .bld-depts { font-size: 11px; }
   }
 
   @media (max-width: 600px) {
-    body { padding: 5px; }
-    header { padding: 8px 12px; border-radius: 12px; }
-    header h1 { font-size: 15px; }
-    header h1 .icon { width: 26px; height: 26px; font-size: 15px; border-radius: 7px; }
+    header { padding: 6px 10px; border-radius: 0 0 10px 10px; }
+    header h1 { font-size: 14px; }
+    header h1 .icon { width: 24px; height: 24px; font-size: 14px; border-radius: 6px; }
     button { font-size: 14px; padding: 10px 16px; border-radius: 10px; }
-    .map-wrapper { border-radius: 12px; }
-    .route-panel { padding: 10px 13px; border-radius: 12px; flex-direction: column; align-items: flex-start; }
+    .route-panel { padding: 10px 13px; border-radius: 12px; flex-direction: column; align-items: flex-start; left: 6px; right: 6px; bottom: 6px; }
     .route-info { font-size: 14px; }
     .route-info .distance-badge { font-size: 16px; }
-    .selection-banner { font-size: 12px; padding: 5px 12px; top: 6px; }
-    .qr-info { padding: 9px 14px; font-size: 14px; border-radius: 12px; }
-    .no-qr-info { padding: 10px 14px; font-size: 14px; border-radius: 12px; }
-    .test-banner { font-size: 13px; padding: 8px 10px; }
+    .selection-banner { font-size: 12px; padding: 5px 12px; top: 56px; }
+    .qr-info { padding: 9px 14px; font-size: 14px; border-radius: 12px; left: 6px; right: 6px; bottom: 6px; }
+    .no-qr-info { padding: 10px 14px; font-size: 14px; border-radius: 12px; top: 56px; left: 6px; right: 6px; }
+    .test-banner { font-size: 13px; padding: 8px 10px; left: 6px; right: 6px; bottom: 6px; }
     .test-banner .test-icon { font-size: 16px; }
     .sidebar-header { font-size: 14px; }
     .bld-table { font-size: 13px; }
     .bld-name { font-size: 13px; }
     .bld-depts { font-size: 11px; }
     .bld-badge { width: 28px; height: 28px; font-size: 14px; }
-    .legend { gap: 10px; }
-    .legend-item { font-size: 12px; }
-    .info-panel { min-height: 11vh; padding: 8px 10px; border-radius: 10px 10px 0 0; }
-    .info-location { font-size: 13px; }
-    .btn-sm { font-size: 12px; padding: 7px 11px; }
+    .legend { gap: 8px; }
+    .legend-item { font-size: 11px; }
+    .info-panel { top: 42px; padding: 6px 10px; border-radius: 0 0 10px 10px; }
+    .info-location { font-size: 12px; }
+    .btn-sm { font-size: 11px; padding: 6px 10px; }
     .zoom-hint { padding: 8px 12px; border-radius: 12px; bottom: 10px; }
     .zoom-hint-fingers .finger { font-size: 24px; }
     .zoom-hint-text { font-size: 11px; max-width: 130px; }
+    .controls { bottom: 6px; }
   }
 </style>
 </head>
@@ -583,6 +636,30 @@
           <span class="zoom-hint-text">Сведи пальцы, чтобы увидеть весь план</span>
         </div>
         <div class="selection-banner hidden" id="selectionBanner">Кликните по карте, чтобы отметить точку</div>
+
+        <div class="qr-info hidden" id="qrInfo">
+          <span class="pin-icon">📍</span> Вы у: <strong id="qrInfoName"></strong>
+        </div>
+
+        <div class="no-qr-info hidden" id="noQrInfo">
+          <span class="warn-icon">⚠</span>
+          <span>QR-код не распознан.<br>Пожалуйста, отсканируйте QR-код у входа в больницу.</span>
+        </div>
+
+        <div class="test-banner hidden" id="testBanner">
+          <span class="test-icon">🧪</span>
+          <span class="test-text">Тестовый режим: точка у КПП. Для реального использования отсканируйте QR-код.</span>
+          <button class="test-close" id="testBannerClose">✕</button>
+        </div>
+
+        <div class="controls" id="controls">
+          <button class="btn-select-map hidden" id="btnSelectMap">📍 Выбрать точку на карте</button>
+        </div>
+
+        <div class="route-panel hidden" id="routePanel">
+          <span class="route-info" id="routeInfo"></span>
+          <button class="btn-reset" id="btnReset">✕ Сбросить маршрут</button>
+        </div>
       </div>
     </div>
 
@@ -594,30 +671,6 @@
         </table>
       </div>
     </div>
-  </div>
-
-  <div class="qr-info hidden" id="qrInfo">
-    <span class="pin-icon">📍</span> Вы у: <strong id="qrInfoName"></strong>
-  </div>
-
-  <div class="no-qr-info hidden" id="noQrInfo">
-    <span class="warn-icon">⚠</span>
-    <span>QR-код не распознан.<br>Пожалуйста, отсканируйте QR-код у входа в больницу.</span>
-  </div>
-
-  <div class="test-banner hidden" id="testBanner">
-    <span class="test-icon">🧪</span>
-    <span class="test-text">Тестовый режим: точка у КПП. Для реального использования отсканируйте QR-код.</span>
-    <button class="test-close" id="testBannerClose">✕</button>
-  </div>
-
-  <div class="controls" id="controls">
-    <button class="btn-select-map hidden" id="btnSelectMap">📍 Выбрать точку на карте</button>
-  </div>
-
-  <div class="route-panel hidden" id="routePanel">
-    <span class="route-info" id="routeInfo"></span>
-    <button class="btn-reset" id="btnReset">✕ Сбросить маршрут</button>
   </div>
 </div>
 
@@ -1378,6 +1431,8 @@
       noQrInfo.classList.add('hidden');
       infoLocName.textContent = state.activeQrName || 'точке';
       infoPanel.classList.remove('hidden');
+      var btnRouteReset2 = document.getElementById('btnRouteReset2');
+      btnRouteReset2.classList.toggle('hidden', state.toBldId === null);
     } else {
       qrInfo.classList.add('hidden');
       infoPanel.classList.add('hidden');
