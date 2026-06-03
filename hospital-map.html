@@ -4,16 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Карта территории больницы</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   :root {
     --green: #2E7D32;
     --green-light: #4CAF50;
-    --green-bg: #E8F5E9;
     --blue: #1565C0;
     --blue-light: #42A5F5;
-    --orange: #E67E22;
     --white: #FFFFFF;
-    --gray: #ECEFF1;
     --dark: #263238;
     --shadow: 0 2px 12px rgba(0,0,0,0.12);
     --red: #E53935;
@@ -36,7 +34,6 @@
   .app {
     height: 100%;
     width: 100%;
-    max-width: none;
     display: flex;
     flex-direction: column;
     gap: 0;
@@ -125,22 +122,25 @@
     position: absolute;
     inset: 0;
     background: #1a1a2e;
-    border-radius: 0;
-    box-shadow: none;
+    overflow: hidden;
+  }
+
+  #map {
+    width: 100%;
+    height: 100%;
+    background: #1a1a2e;
   }
 
   .sidebar {
     position: absolute;
     right: 0;
-    bottom: 0;
     top: 0;
+    bottom: 0;
     z-index: 15;
     width: 290px;
-    flex-shrink: 0;
-    background: rgba(255,255,255,0.95);
+    background: rgba(255,255,255,0.96);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border-radius: 0;
     box-shadow: -2px 0 16px rgba(0,0,0,0.12);
     display: flex;
     flex-direction: column;
@@ -164,16 +164,6 @@
     flex: 1;
   }
 
-  canvas {
-    display: block;
-    width: 100%;
-    height: 100%;
-    cursor: default;
-    touch-action: none;
-  }
-
-  canvas.pointer { cursor: crosshair; }
-
   .bld-table {
     width: 100%;
     border-collapse: collapse;
@@ -186,13 +176,11 @@
     border-bottom: 1px solid #F5F5F5;
   }
   .bld-row:last-child { border-bottom: none; }
-
   .bld-row:hover { background: #F5F5F5; }
 
   .bld-row.highlighted {
     background: #E3F2FD;
   }
-
   .bld-row.highlighted .bld-badge {
     background: var(--blue);
     color: #FFFFFF;
@@ -234,282 +222,49 @@
     line-height: 1.45;
   }
 
-  .info-panel {
-    position: absolute;
-    top: 50px;
-    left: 0;
-    right: 0;
-    min-height: auto;
-    max-height: none;
-    background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.78) 100%);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    padding: 8px 14px;
+  .leaflet-container {
+    background: #1a1a2e;
+  }
+
+  .bld-marker-inner {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: #D7CCC8;
+    border: 2px solid #8D6E63;
     display: flex;
-    flex-direction: column;
+    align-items: center;
     justify-content: center;
-    gap: 6px;
-    z-index: 10;
-    border-radius: 0 0 12px 12px;
-    border-bottom: 1px solid rgba(0,0,0,0.08);
-    pointer-events: auto;
-    animation: slideDown 0.35s ease-out;
+    font-weight: 700;
+    font-size: 16px;
+    color: #5D4037;
+    box-shadow: 2px 2px 6px rgba(0,0,0,0.20);
+    font-family: 'Segoe UI', system-ui, sans-serif;
   }
-  @keyframes slideDown {
-    from { opacity: 0; transform: translateY(-20px); }
-    to { opacity: 1; transform: translateY(0); }
+
+  .bld-marker-inner.target {
+    box-shadow: 0 0 0 4px rgba(21,101,192,0.55);
+    border-color: #1565C0;
   }
-  .info-location {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--dark);
+
+  .start-marker-inner {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #2E7D32;
+    border: 3px solid #FFFFFF;
     display: flex;
     align-items: center;
-    gap: 6px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .info-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-  .btn-sm {
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 7px 13px;
-    border: none;
-    border-radius: 9px;
-    cursor: pointer;
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.10);
-    white-space: nowrap;
-    background: #ECEFF1;
-    color: #37474F;
-  }
-  .btn-sm:active { transform: scale(0.95); }
-  .btn-sm-reset {
-    background: #FFEBEE;
-    color: #C62828;
-  }
-  .btn-sm-reset:active { background: #FFCDD2; }
-
-  .zoom-hint {
-    position: absolute;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.78);
-    color: #FFFFFF;
-    border-radius: 16px;
-    padding: 10px 18px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    z-index: 10;
-    pointer-events: none;
-    animation: fadeInUp 0.5s ease-out;
-    transition: opacity 0.4s;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
-  }
-  .zoom-hint.hiding { opacity: 0; }
-  @keyframes fadeInUp {
-    from { opacity: 0; transform: translateX(-50%) translateY(12px); }
-    to { opacity: 1; transform: translateX(-50%) translateY(0); }
-  }
-  .zoom-hint-fingers {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-  }
-  .zoom-hint-fingers .finger {
-    font-size: 30px;
-    display: inline-block;
-    line-height: 1;
-  }
-  .zoom-hint-fingers .finger.left {
-    animation: pinchLeft 1.3s ease-in-out infinite;
-  }
-  .zoom-hint-fingers .finger.right {
-    animation: pinchRight 1.3s ease-in-out infinite;
-  }
-  @keyframes pinchLeft {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(7px); }
-  }
-  @keyframes pinchRight {
-    0%, 100% { transform: translateX(0); }
-    50% { transform: translateX(-7px); }
-  }
-  .zoom-hint-text {
-    font-size: 12px;
-    font-weight: 500;
-    line-height: 1.35;
-    max-width: 160px;
-    text-align: left;
-  }
-
-  .selection-banner {
-    position: absolute;
-    top: 60px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(46,125,50,0.92);
-    color: white;
-    padding: 7px 18px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 600;
-    pointer-events: none;
-    animation: pulse-banner 1.5s ease-in-out infinite;
-    white-space: nowrap;
-    z-index: 12;
-  }
-
-  @keyframes pulse-banner {
-    0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
-    50% { opacity: 0.8; transform: translateX(-50%) scale(1.04); }
-  }
-
-  .no-qr-info {
-    position: absolute;
-    top: 60px;
-    left: 12px;
-    right: 12px;
-    background: #FFF3E0;
-    border: 1.5px solid #FFB74D;
-    border-radius: 14px;
-    padding: 14px 18px;
-    box-shadow: var(--shadow);
-    font-size: 14px;
-    font-weight: 500;
-    color: #E65100;
-    display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    line-height: 1.5;
-    z-index: 12;
-  }
-
-  .no-qr-info .warn-icon {
-    font-size: 22px;
-    flex-shrink: 0;
-    line-height: 1;
-  }
-
-  .test-banner {
-    position: absolute;
-    bottom: 12px;
-    left: 12px;
-    right: 12px;
-    background: rgba(66,66,66,0.88);
-    color: #E0E0E0;
-    border-radius: 12px;
-    padding: 9px 14px;
-    font-size: 13px;
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-shadow: var(--shadow);
-    z-index: 12;
-  }
-
-  .test-banner .test-icon { font-size: 18px; flex-shrink: 0; }
-
-  .test-banner .test-text {
-    flex: 1;
-    min-width: 0;
-    line-height: 1.4;
-  }
-
-  .test-banner .test-close {
-    background: none;
-    border: none;
-    color: #BDBDBD;
-    font-size: 18px;
-    cursor: pointer;
-    padding: 2px 6px;
-    border-radius: 6px;
-    flex-shrink: 0;
-    line-height: 1;
-    box-shadow: none;
-    transition: color 0.15s;
-  }
-  .test-banner .test-close:hover {
-    color: #FFFFFF;
-    background: rgba(255,255,255,0.1);
-  }
-
-  .qr-info {
-    position: absolute;
-    bottom: 12px;
-    left: 12px;
-    right: 12px;
-    background: var(--white);
-    border-radius: 14px;
-    padding: 11px 18px;
-    box-shadow: var(--shadow);
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--dark);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-    z-index: 12;
-  }
-
-  .qr-info .pin-icon { font-size: 18px; }
-
-  .controls {
-    position: absolute;
-    bottom: 12px;
-    left: 0;
-    right: 0;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
     justify-content: center;
-    z-index: 12;
-    pointer-events: none;
+    font-size: 17px;
+    box-shadow: 0 0 14px rgba(46,125,50,0.45);
+    animation: startPulse 1.5s ease-in-out infinite;
   }
 
-  button {
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 11px;
-    cursor: pointer;
-    transition: all 0.18s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: var(--shadow);
-    white-space: nowrap;
+  @keyframes startPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(46,125,50,0.35); }
+    50% { box-shadow: 0 0 22px rgba(46,125,50,0.70); }
   }
-
-  button:active { transform: scale(0.96); }
-
-  .btn-select {
-    background: var(--green);
-    color: white;
-  }
-  .btn-select:hover { background: #1B5E20; }
-
-  .btn-select-map {
-    background: #5C6BC0;
-    color: white;
-    pointer-events: auto;
-  }
-  .btn-select-map:hover { background: #3949AB; }
 
   .route-panel {
     position: absolute;
@@ -526,7 +281,7 @@
     flex-wrap: wrap;
     gap: 10px;
     animation: slideUp 0.3s ease-out;
-    z-index: 12;
+    z-index: 13;
   }
 
   @keyframes slideUp {
@@ -553,11 +308,129 @@
     font-size: 17px;
   }
 
-  .btn-reset {
-    background: #EF5350;
-    color: white;
+  .qr-info {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    background: var(--white);
+    border-radius: 14px;
+    padding: 11px 18px;
+    box-shadow: var(--shadow);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    z-index: 12;
   }
+
+  .qr-info .pin-icon { font-size: 18px; }
+
+  .no-qr-info {
+    position: absolute;
+    top: 54px;
+    left: 12px;
+    right: 12px;
+    background: #FFF3E0;
+    border: 1.5px solid #FFB74D;
+    border-radius: 14px;
+    padding: 14px 18px;
+    box-shadow: var(--shadow);
+    font-size: 14px;
+    font-weight: 500;
+    color: #E65100;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.5;
+    z-index: 12;
+  }
+
+  .no-qr-info .warn-icon { font-size: 22px; flex-shrink: 0; line-height: 1; }
+
+  .test-banner {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    background: rgba(66,66,66,0.88);
+    color: #E0E0E0;
+    border-radius: 12px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow);
+    z-index: 12;
+  }
+
+  .test-banner .test-icon { font-size: 18px; flex-shrink: 0; }
+  .test-banner .test-text { flex: 1; min-width: 0; line-height: 1.4; }
+  .test-banner .test-close {
+    background: none; border: none; color: #BDBDBD; font-size: 18px;
+    cursor: pointer; padding: 2px 6px; border-radius: 6px;
+    flex-shrink: 0; line-height: 1; box-shadow: none; transition: color 0.15s;
+  }
+  .test-banner .test-close:hover { color: #FFFFFF; background: rgba(255,255,255,0.1); }
+
+  .controls {
+    position: absolute;
+    bottom: 12px;
+    left: 0;
+    right: 0;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    z-index: 12;
+    pointer-events: none;
+  }
+  .controls button { pointer-events: auto; }
+
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 11px;
+    cursor: pointer;
+    transition: all 0.18s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: var(--shadow);
+    white-space: nowrap;
+  }
+  button:active { transform: scale(0.96); }
+
+  .btn-select { background: var(--green); color: white; }
+  .btn-select:hover { background: #1B5E20; }
+
+  .btn-select-map { background: #5C6BC0; color: white; }
+  .btn-select-map:hover { background: #3949AB; }
+
+  .btn-reset { background: #EF5350; color: white; }
   .btn-reset:hover { background: #C62828; }
+
+  .btn-sm {
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 9px;
+    cursor: pointer;
+    background: #ECEFF1;
+    color: #37474F;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+    white-space: nowrap;
+  }
+  .btn-sm:active { transform: scale(0.95); }
 
   .hidden { display: none !important; }
 
@@ -584,9 +457,8 @@
     .route-panel { padding: 10px 13px; border-radius: 12px; flex-direction: column; align-items: flex-start; left: 6px; right: 6px; bottom: 6px; }
     .route-info { font-size: 14px; }
     .route-info .distance-badge { font-size: 16px; }
-    .selection-banner { font-size: 12px; padding: 5px 12px; top: 56px; }
     .qr-info { padding: 9px 14px; font-size: 14px; border-radius: 12px; left: 6px; right: 6px; bottom: 6px; }
-    .no-qr-info { padding: 10px 14px; font-size: 14px; border-radius: 12px; top: 56px; left: 6px; right: 6px; }
+    .no-qr-info { padding: 10px 14px; font-size: 14px; border-radius: 12px; top: 48px; left: 6px; right: 6px; }
     .test-banner { font-size: 13px; padding: 8px 10px; left: 6px; right: 6px; bottom: 6px; }
     .test-banner .test-icon { font-size: 16px; }
     .sidebar-header { font-size: 14px; }
@@ -596,13 +468,8 @@
     .bld-badge { width: 28px; height: 28px; font-size: 14px; }
     .legend { gap: 8px; }
     .legend-item { font-size: 11px; }
-    .info-panel { top: 42px; padding: 6px 10px; border-radius: 0 0 10px 10px; }
-    .info-location { font-size: 12px; }
-    .btn-sm { font-size: 11px; padding: 6px 10px; }
-    .zoom-hint { padding: 8px 12px; border-radius: 12px; bottom: 10px; }
-    .zoom-hint-fingers .finger { font-size: 24px; }
-    .zoom-hint-text { font-size: 11px; max-width: 130px; }
     .controls { bottom: 6px; }
+    .bld-marker-inner { width: 28px; height: 28px; font-size: 14px; border-radius: 7px; }
   }
 </style>
 </head>
@@ -620,22 +487,7 @@
   <div class="main-content">
     <div class="map-column">
       <div class="map-wrapper" id="mapWrapper">
-        <canvas id="map"></canvas>
-        <div class="info-panel hidden" id="infoPanel">
-          <div class="info-location">📍 Вы у: <strong id="infoLocationName"></strong></div>
-          <div class="info-actions">
-            <button class="btn-sm" id="btnZoomReset">↺ Сбросить зум</button>
-            <button class="btn-sm btn-sm-reset" id="btnRouteReset2">✕ Сбросить маршрут</button>
-          </div>
-        </div>
-        <div class="zoom-hint hidden" id="zoomHint">
-          <div class="zoom-hint-fingers">
-            <span class="finger left">👆</span>
-            <span class="finger right">👆</span>
-          </div>
-          <span class="zoom-hint-text">Сведи пальцы, чтобы увидеть весь план</span>
-        </div>
-        <div class="selection-banner hidden" id="selectionBanner">Кликните по карте, чтобы отметить точку</div>
+        <div id="map"></div>
 
         <div class="qr-info hidden" id="qrInfo">
           <span class="pin-icon">📍</span> Вы у: <strong id="qrInfoName"></strong>
@@ -653,7 +505,7 @@
         </div>
 
         <div class="controls" id="controls">
-          <button class="btn-select-map hidden" id="btnSelectMap">📍 Выбрать точку на карте</button>
+          <button class="btn-sm" id="btnZoomReset">↺ Сбросить зум</button>
         </div>
 
         <div class="route-panel hidden" id="routePanel">
@@ -674,23 +526,14 @@
   </div>
 </div>
 
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function() {
   var IMG_W = 2016, IMG_H = 864;
   var METERS_PER_PX = 0.25;
-  var mapImage = null;
 
-  function getScaleFactor() {
-    var rect = canvas.getBoundingClientRect();
-    return { x: IMG_W / rect.width, y: IMG_H / rect.height };
-  }
-
-  function screenPos(px, py) {
-    return { x: px, y: py };
-  }
-
-  function invScreen(sx, sy) {
-    return { gx: sx, gy: sy };
+  function toLatLng(gx, gy) {
+    return [gy, gx];
   }
 
   var BUILDINGS = [
@@ -812,17 +655,28 @@
     return { nodes: path, distance: distMap[toKey] };
   }
 
-  function pathToScreenPoints(path) {
+  function pathToLatLngs(path) {
     return path.nodes.map(function(k) {
       var n = ALL_NODES[k];
-      return screenPos(n.gx, n.gy);
+      return toLatLng(n.gx, n.gy);
     });
   }
 
-  var canvas = document.getElementById('map');
-  var ctx = canvas.getContext('2d');
-  canvas.width = IMG_W;
-  canvas.height = IMG_H;
+  var map = L.map('map', {
+    crs: L.CRS.Simple,
+    minZoom: 1,
+    maxZoom: 5,
+    zoomControl: false,
+    attributionControl: false,
+  });
+
+  var imageBounds = [[0, 0], [IMG_H, IMG_W]];
+  L.imageOverlay('hospital-map.png', imageBounds).addTo(map);
+
+  map.fitBounds(imageBounds);
+
+  var INIT_CENTER = toLatLng(1301, 684);
+  var INIT_ZOOM = 3;
 
   var state = {
     activeQrId: null,
@@ -831,474 +685,186 @@
     startGy: null,
     startKey: null,
     toBldId: null,
-    routePath: null,
     routeDistance: 0,
-    mapSelectMode: false,
-    hoveredBldId: null,
-    hoveredCalloutId: null,
   };
 
   var isDebug = false;
   var isTestMode = false;
 
-  var animState = {
-    active: false,
-    fullPath: null,
-    startTime: 0,
-    duration: 650,
-    targetBldId: null,
-  };
-
-  var viewport = {
-    scale: 1,
-    offsetX: 0,
-    offsetY: 0,
-    targetScale: 1,
-    targetOffsetX: 0,
-    targetOffsetY: 0,
-    initScale: 1,
-    initOffsetX: 0,
-    initOffsetY: 0,
-  };
-
-  var touchState = {
-    mode: null,
-    startX: 0,
-    startY: 0,
-    startOffsetX: 0,
-    startOffsetY: 0,
-    startScale: 1,
-    pinchDist0: 0,
-    pinchMidX: 0,
-    pinchMidY: 0,
-    pinchStartScale: 1,
-    pinchStartOffsetX: 0,
-    pinchStartOffsetY: 0,
-  };
-
-  var hintTimer = null;
-  var hintDismissed = false;
-  var touchMoved = false;
-
-  function loadMapImage() {
-    mapImage = new Image();
-    mapImage.onload = function() { render(); };
-    mapImage.src = 'hospital-map.png';
-  }
-
-  function drawMapImage() {
-    if (mapImage && mapImage.complete && mapImage.naturalWidth > 0) {
-      ctx.drawImage(mapImage, 0, 0);
-    } else {
-      ctx.fillStyle = '#E8F5E9';
-      ctx.fillRect(0, 0, IMG_W, IMG_H);
-    }
-  }
-
-  function getBuildingColor(bld) {
-    return '#D7CCC8';
-  }
+  var startMarker = null;
+  var buildingMarkers = {};
+  var calloutMarkers = {};
+  var routeLine = null;
 
   function hasStart() { return state.startKey !== null; }
 
-  function easeOutCubic(t) {
-    return 1 - Math.pow(1 - t, 3);
+  function createBuildingIcon(bldId, isTarget) {
+    return L.divIcon({
+      className: 'bld-marker-icon',
+      html: '<div class="bld-marker-inner' + (isTarget ? ' target' : '') + '">' + bldId + '</div>',
+      iconSize: [34, 34],
+      iconAnchor: [17, 17],
+    });
   }
 
-  function initViewport() {
-    if (!hasStart()) return;
-    var cx = state.startGx;
-    var cy = state.startGy;
-    var s = 2.0;
-    viewport.scale = 1;
-    viewport.offsetX = 0;
-    viewport.offsetY = 0;
-    viewport.targetScale = s;
-    viewport.targetOffsetX = IMG_W / 2 - cx * s;
-    viewport.targetOffsetY = IMG_H / 2 - cy * s;
-    viewport.initScale = s;
-    viewport.initOffsetX = viewport.targetOffsetX;
-    viewport.initOffsetY = viewport.targetOffsetY;
+  function createStartIcon() {
+    return L.divIcon({
+      className: 'start-marker-icon',
+      html: '<div class="start-marker-inner">📍</div>',
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+    });
   }
 
-  function resetViewport() {
-    viewport.targetScale = viewport.initScale;
-    viewport.targetOffsetX = viewport.initOffsetX;
-    viewport.targetOffsetY = viewport.initOffsetY;
-    if (!hasStart()) {
-      viewport.targetScale = 1;
-      viewport.targetOffsetX = 0;
-      viewport.targetOffsetY = 0;
-    }
-    render();
+  function createCalloutIcon() {
+    return L.divIcon({
+      className: 'callout-marker-icon',
+      html: '<div style="width:12px;height:12px;border-radius:50%;background:rgba(21,101,192,0.45);border:1.5px solid rgba(21,101,192,0.7);"></div>',
+      iconSize: [12, 12],
+      iconAnchor: [6, 6],
+    });
   }
 
-  function isViewportAnimating() {
-    return Math.abs(viewport.scale - viewport.targetScale) > 0.001
-        || Math.abs(viewport.offsetX - viewport.targetOffsetX) > 0.15
-        || Math.abs(viewport.offsetY - viewport.targetOffsetY) > 0.15;
+  function refreshBuildingMarkers() {
+    Object.keys(buildingMarkers).forEach(function(k) {
+      map.removeLayer(buildingMarkers[k]);
+    });
+    buildingMarkers = {};
+
+    BUILDINGS.forEach(function(b) {
+      var isTarget = state.toBldId === b.id;
+      var icon = createBuildingIcon(b.id, isTarget);
+      var marker = L.marker(toLatLng(b.gx, b.gy), { icon: icon }).addTo(map);
+      marker.on('click', function() {
+        if (hasStart()) setRoute(b.id);
+      });
+      buildingMarkers['B' + b.id] = marker;
+    });
   }
 
-  function lerpViewport() {
-    if (!isViewportAnimating()) {
-      viewport.scale = viewport.targetScale;
-      viewport.offsetX = viewport.targetOffsetX;
-      viewport.offsetY = viewport.targetOffsetY;
-      return false;
-    }
-    var f = 0.14;
-    viewport.scale += (viewport.targetScale - viewport.scale) * f;
-    viewport.offsetX += (viewport.targetOffsetX - viewport.offsetX) * f;
-    viewport.offsetY += (viewport.targetOffsetY - viewport.offsetY) * f;
-    return true;
-  }
+  function refreshCalloutMarkers() {
+    Object.keys(calloutMarkers).forEach(function(k) {
+      map.removeLayer(calloutMarkers[k]);
+    });
+    calloutMarkers = {};
 
-  function dismissHint() {
-    if (hintDismissed) return;
-    hintDismissed = true;
-    if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; }
-    var el = document.getElementById('zoomHint');
-    if (el) {
-      el.classList.add('hiding');
-      setTimeout(function() { el.classList.add('hidden'); }, 400);
-    }
-  }
-
-  function scheduleHint() {
-    if (hintDismissed) return;
-    hintTimer = setTimeout(function() {
-      if (hintDismissed) return;
-      var el = document.getElementById('zoomHint');
-      if (el) el.classList.remove('hidden');
-      hintTimer = setTimeout(function() {
-        dismissHint();
-      }, 5000);
-    }, 1000);
-  }
-
-  function getAnimatedPath(fullPath, t) {
-    if (t <= 0) return [fullPath[0]];
-    if (t >= 1) return fullPath.slice();
-
-    var segLengths = [];
-    var totalLen = 0;
-    for (var i = 0; i < fullPath.length - 1; i++) {
-      var dx = fullPath[i + 1].x - fullPath[i].x;
-      var dy = fullPath[i + 1].y - fullPath[i].y;
-      var len = Math.sqrt(dx * dx + dy * dy);
-      segLengths.push(len);
-      totalLen += len;
-    }
-    if (totalLen === 0) return fullPath.slice();
-
-    var target = t * totalLen;
-    var accum = 0;
-    var result = [fullPath[0]];
-
-    for (var i = 0; i < segLengths.length; i++) {
-      if (accum + segLengths[i] >= target) {
-        var segT = (target - accum) / segLengths[i];
-        result.push({
-          x: fullPath[i].x + (fullPath[i + 1].x - fullPath[i].x) * segT,
-          y: fullPath[i].y + (fullPath[i + 1].y - fullPath[i].y) * segT,
-        });
-        return result;
-      }
-      accum += segLengths[i];
-      result.push(fullPath[i + 1]);
-    }
-    return fullPath.slice();
-  }
-
-  function startRouteAnimation(fullPath, toBldId) {
-    cancelRouteAnimation();
-    animState.active = true;
-    animState.fullPath = fullPath.slice();
-    animState.startTime = performance.now();
-    animState.duration = 650;
-    animState.targetBldId = toBldId;
-    state.routePath = [fullPath[0]];
-  }
-
-  function cancelRouteAnimation() {
-    animState.active = false;
-    animState.fullPath = null;
-  }
-
-  function updateAnimation(now) {
-    if (!animState.active) return false;
-    var elapsed = now - animState.startTime;
-    var rawT = Math.min(elapsed / animState.duration, 1);
-    var t = easeOutCubic(rawT);
-    state.routePath = getAnimatedPath(animState.fullPath, t);
-    if (rawT >= 1) {
-      state.routePath = animState.fullPath.slice();
-      animState.active = false;
-      return false;
-    }
-    return true;
-  }
-
-  function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.arcTo(x + w, y, x + w, y + r, r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-    ctx.lineTo(x + r, y + h);
-    ctx.arcTo(x, y + h, x, y + h - r, r);
-    ctx.lineTo(x, y + r);
-    ctx.arcTo(x, y, x + r, y, r);
-    ctx.closePath();
-  }
-
-  var MARKER_SIZE = 34;
-
-  function drawFlatBuilding(bld) {
-    var pos = screenPos(bld.gx, bld.gy);
-    var x = pos.x - MARKER_SIZE / 2;
-    var y = pos.y - MARKER_SIZE / 2;
-    var r = 8;
-
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.20)';
-    ctx.shadowBlur = 6;
-    ctx.shadowOffsetX = 2;
-    ctx.shadowOffsetY = 2;
-    roundRect(ctx, x, y, MARKER_SIZE, MARKER_SIZE, r);
-    ctx.fillStyle = '#D7CCC8';
-    ctx.fill();
-    ctx.strokeStyle = '#8D6E63';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.restore();
-
-    if (state.toBldId === bld.id) {
-      ctx.save();
-      ctx.strokeStyle = 'rgba(21,101,192,0.65)';
-      ctx.lineWidth = 4;
-      roundRect(ctx, x - 4, y - 4, MARKER_SIZE + 8, MARKER_SIZE + 8, r + 4);
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    if (state.hoveredBldId === bld.id && state.toBldId !== bld.id) {
-      roundRect(ctx, x, y, MARKER_SIZE, MARKER_SIZE, r);
-      ctx.fillStyle = 'rgba(255,255,255,0.3)';
-      ctx.fill();
-    }
-  }
-
-  function drawBuildingLabel(bld) {
-    var rc = screenPos(bld.gx, bld.gy);
-    ctx.font = 'bold 16px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#5D4037';
-    ctx.fillText(String(bld.id), rc.x, rc.y);
-  }
-
-  function drawDestinationMarker(bld) {
-    var pos = screenPos(bld.gx, bld.gy);
-    var py = pos.y - MARKER_SIZE / 2 - 16;
-    ctx.beginPath();
-    ctx.arc(pos.x, py, 11, 0, Math.PI * 2);
-    ctx.fillStyle = '#1565C0';
-    ctx.fill();
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.font = 'bold 10px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText('Цель', pos.x, py);
-  }
-
-  function drawCallouts() {
     CALLOUTS.forEach(function(c) {
-      var sc = screenPos(c.gx, c.gy);
-      var isHovered = state.hoveredCalloutId === c.id;
-
-      if (isHovered && hasStart()) {
-        ctx.save();
-        ctx.fillStyle = 'rgba(21,101,192,0.15)';
-        ctx.beginPath();
-        ctx.arc(sc.x, sc.y, 22, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(21,101,192,0.45)';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4, 3]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.restore();
-      }
+      var marker = L.marker(toLatLng(c.gx, c.gy), {
+        icon: createCalloutIcon(),
+        interactive: true,
+      }).addTo(map);
+      marker.on('click', function() {
+        if (hasStart()) setRoute(c.buildingId);
+      });
+      calloutMarkers['C' + c.id] = marker;
     });
   }
 
-  function drawStartMarker() {
+  function refreshStartMarker() {
+    if (startMarker) { map.removeLayer(startMarker); startMarker = null; }
     if (!hasStart()) return;
-    var sc = screenPos(state.startGx, state.startGy);
-
-    var t = Date.now() / 1000;
-    var pulse = 1 + 0.12 * Math.sin(t * 2.5);
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(sc.x, sc.y, 22 * pulse, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(46,125,50,0.18)';
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(sc.x, sc.y, 12, 0, Math.PI * 2);
-    ctx.fillStyle = '#2E7D32';
-    ctx.fill();
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 2.5;
-    ctx.stroke();
-
-    ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillText('📍', sc.x, sc.y + 1);
-
-    ctx.font = '600 13px "Segoe UI", system-ui, sans-serif';
-    ctx.fillStyle = '#2E7D32';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('Я здесь', sc.x, sc.y - 18);
-
-    ctx.restore();
+    var icon = createStartIcon();
+    startMarker = L.marker(toLatLng(state.startGx, state.startGy), {
+      icon: icon,
+      zIndexOffset: 1000,
+    }).addTo(map);
   }
 
-  function drawQrDots() {
-    QR_POINTS.forEach(function(q) {
-      var isActive = (state.activeQrId === q.id);
-      var sc = screenPos(q.gx, q.gy);
-      var r = isActive ? 14 : 7;
-      ctx.beginPath();
-      ctx.arc(sc.x, sc.y, r, 0, Math.PI * 2);
-      ctx.fillStyle = isActive ? '#2E7D32' : 'rgba(46,125,50,0.55)';
-      ctx.fill();
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = isActive ? 2.5 : 1.5;
-      ctx.stroke();
-
-      if (!isActive) {
-        ctx.font = '10px "Segoe UI", system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillStyle = '#2E7D32';
-        ctx.fillText('QR', sc.x, sc.y + r + 4);
-      }
-    });
+  function drawRouteLine() {
+    if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+    if (!state.toBldId || !hasStart()) return;
+    var result = findPath(state.startKey, state.toBldId);
+    if (!result) return;
+    state.routeDistance = result.distance;
+    var latlngs = pathToLatLngs(result);
+    routeLine = L.polyline(latlngs, {
+      color: '#42A5F5',
+      weight: 5,
+      opacity: 0.85,
+      dashArray: '13 8',
+      lineCap: 'round',
+      lineJoin: 'round',
+    }).addTo(map);
   }
 
-  function drawRoutePath() {
-    if (!state.routePath || state.routePath.length < 2) return;
-    var pts = state.routePath;
-    var isAnim = animState.active;
-
-    ctx.save();
-
-    ctx.strokeStyle = 'rgba(66,165,245,0.45)';
-    ctx.lineWidth = 13;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-    ctx.stroke();
-
-    ctx.strokeStyle = '#42A5F5';
-    ctx.lineWidth = 5;
-    ctx.setLineDash([13, 8]);
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    var dotCount = isAnim ? pts.length - 1 : pts.length;
-    for (var i = 0; i < dotCount; i++) {
-      ctx.beginPath();
-      ctx.arc(pts[i].x, pts[i].y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fill();
-      ctx.strokeStyle = '#1565C0';
-      ctx.lineWidth = 1.8;
-      ctx.stroke();
-    }
-
-    if (isAnim) {
-      var tip = pts[pts.length - 1];
-      var pulse = 0.7 + 0.3 * Math.sin(Date.now() / 140);
-      ctx.beginPath();
-      ctx.arc(tip.x, tip.y, 9 * pulse, 0, Math.PI * 2);
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fill();
-      ctx.strokeStyle = '#1565C0';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(tip.x, tip.y, 4, 0, Math.PI * 2);
-      ctx.fillStyle = '#1565C0';
-      ctx.fill();
-    }
-
-    if (!isAnim) {
-      var last  = pts[pts.length - 1];
-      var prev2 = pts[pts.length - 2];
-      var angle = Math.atan2(last.y - prev2.y, last.x - prev2.x);
-      var as = 15;
-      ctx.beginPath();
-      ctx.moveTo(last.x, last.y);
-      ctx.lineTo(last.x - as * Math.cos(angle - 0.45), last.y - as * Math.sin(angle - 0.45));
-      ctx.lineTo(last.x - as * Math.cos(angle + 0.45), last.y - as * Math.sin(angle + 0.45));
-      ctx.closePath();
-      ctx.fillStyle = '#1565C0';
-      ctx.fill();
-    }
-
-    ctx.restore();
+  function setQrPoint(qrId) {
+    var qr = QR_POINTS.find(function(q) { return q.id === qrId; });
+    if (!qr) return;
+    state.activeQrId = qr.id;
+    state.activeQrName = qr.name;
+    state.startGx = qr.gx;
+    state.startGy = qr.gy;
+    state.startKey = qr.id;
+    clearRoute();
+    refreshStartMarker();
+    refreshBuildingMarkers();
+    map.setView(INIT_CENTER, INIT_ZOOM, { animate: true, duration: 0.6 });
+    updateUI();
   }
 
-  function hitTestBuilding(sx, sy) {
-    var hitRadius = 22;
-    for (var i = 0; i < BUILDINGS.length; i++) {
-      var b = BUILDINGS[i];
-      var pos = screenPos(b.gx, b.gy);
-      var dx = sx - pos.x;
-      var dy = sy - pos.y;
-      if (Math.sqrt(dx * dx + dy * dy) < hitRadius) {
-        return b;
+  function setRoute(toBldId) {
+    if (!hasStart()) return;
+    if (state.toBldId === toBldId) { clearRoute(); return; }
+    var result = findPath(state.startKey, toBldId);
+    if (!result) return;
+    state.toBldId = toBldId;
+    state.routeDistance = result.distance;
+    refreshBuildingMarkers();
+    drawRouteLine();
+    updateUI();
+  }
+
+  function clearRoute() {
+    state.toBldId = null;
+    state.routeDistance = 0;
+    if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+    refreshBuildingMarkers();
+    updateUI();
+  }
+
+  function updateUI() {
+    var routePanel = document.getElementById('routePanel');
+    var routeInfo  = document.getElementById('routeInfo');
+    var qrInfo     = document.getElementById('qrInfo');
+    var qrInfoName = document.getElementById('qrInfoName');
+    var noQrInfo   = document.getElementById('noQrInfo');
+    var testBanner = document.getElementById('testBanner');
+
+    if (state.toBldId !== null) {
+      var m = Math.round(state.routeDistance * METERS_PER_PX);
+      var fromName = state.activeQrName || 'точки';
+      routeInfo.innerHTML =
+        'От <strong>' + fromName + '</strong> до <strong>Корпуса ' + state.toBldId +
+        '</strong> <span class="distance-badge">≈ ' + m + ' м</span>';
+      routePanel.classList.remove('hidden');
+    } else {
+      routePanel.classList.add('hidden');
+    }
+
+    if (hasStart()) {
+      qrInfoName.textContent = state.activeQrName;
+      qrInfo.classList.remove('hidden');
+      noQrInfo.classList.add('hidden');
+    } else {
+      qrInfo.classList.add('hidden');
+      if (isDebug) {
+        noQrInfo.classList.add('hidden');
+      } else {
+        noQrInfo.classList.remove('hidden');
       }
     }
-    return null;
+
+    testBanner.classList.toggle('hidden', !isTestMode);
+
+    updateTableHighlight();
   }
 
-  function hitTestCallout(sx, sy) {
-    var hitRadius = 28;
-    for (var i = 0; i < CALLOUTS.length; i++) {
-      var c = CALLOUTS[i];
-      var pos = screenPos(c.gx, c.gy);
-      var dx = sx - pos.x;
-      var dy = sy - pos.y;
-      if (Math.sqrt(dx * dx + dy * dy) < hitRadius) {
-        return c;
-      }
+  function updateTableHighlight() {
+    var rows = document.querySelectorAll('.bld-row');
+    for (var i = 0; i < rows.length; i++) {
+      var rowId = parseInt(rows[i].getAttribute('data-bld-id'), 10);
+      rows[i].classList.toggle('highlighted', rowId === state.toBldId);
     }
-    return null;
-  }
-
-  function getCanvasCoords(e) {
-    var rect = canvas.getBoundingClientRect();
-    var scale = getScaleFactor();
-    var ix = (e.clientX - rect.left) * scale.x;
-    var iy = (e.clientY - rect.top) * scale.y;
-    return { x: (ix - viewport.offsetX) / viewport.scale, y: (iy - viewport.offsetY) / viewport.scale };
   }
 
   function handleTableRowClick(bldId) {
@@ -1310,16 +876,8 @@
       setRoute(bldId);
     } else {
       state.toBldId = bldId;
+      refreshBuildingMarkers();
       updateUI();
-      render();
-    }
-  }
-
-  function updateTableHighlight() {
-    var rows = document.querySelectorAll('.bld-row');
-    for (var i = 0; i < rows.length; i++) {
-      var rowId = parseInt(rows[i].getAttribute('data-bld-id'), 10);
-      rows[i].classList.toggle('highlighted', rowId === state.toBldId);
     }
   }
 
@@ -1340,346 +898,8 @@
     });
   }
 
-  function setQrPoint(qrId) {
-    var qr = QR_POINTS.find(function(q) { return q.id === qrId; });
-    if (!qr) return;
-    state.activeQrId = qr.id;
-    state.activeQrName = qr.name;
-    state.startGx = qr.gx;
-    state.startGy = qr.gy;
-    state.startKey = qr.id;
-    clearRoute();
-    initViewport();
-    updateUI();
-    render();
-    scheduleHint();
-  }
-
-  function setMapPin(sx, sy) {
-    var grid = invScreen(sx, sy);
-    var gx = grid.gx;
-    var gy = grid.gy;
-
-    var bestWp = null, bestDist = Infinity;
-    WAYPOINTS.forEach(function(w) {
-      var d = distGridPoint(gx, gy, w.gx, w.gy);
-      if (d < bestDist) { bestDist = d; bestWp = w; }
-    });
-
-    removeNode('mappin');
-    addNode('mappin', { gx: gx, gy: gy });
-    addEdge('mappin', bestWp.id);
-
-    state.activeQrId = null;
-    state.activeQrName = 'выбранная точка';
-    state.startGx = gx;
-    state.startGy = gy;
-    state.startKey = 'mappin';
-    state.mapSelectMode = false;
-    clearRoute();
-    updateUI();
-    render();
-  }
-
-  function setRoute(toBldId) {
-    if (!hasStart()) return;
-    if (state.toBldId === toBldId) { clearRoute(); return; }
-    var result = findPath(state.startKey, toBldId);
-    if (!result) return;
-    state.toBldId = toBldId;
-    state.routeDistance = result.distance;
-    var fullPath = pathToScreenPoints(result);
-    startRouteAnimation(fullPath, toBldId);
-    updateUI();
-  }
-
-  function clearRoute() {
-    cancelRouteAnimation();
-    state.toBldId = null;
-    state.routePath = null;
-    state.routeDistance = 0;
-    updateUI();
-    render();
-  }
-
-  function updateUI() {
-    var routePanel = document.getElementById('routePanel');
-    var routeInfo  = document.getElementById('routeInfo');
-    var btnMap     = document.getElementById('btnSelectMap');
-    var banner     = document.getElementById('selectionBanner');
-    var qrInfo     = document.getElementById('qrInfo');
-    var qrInfoName = document.getElementById('qrInfoName');
-    var noQrInfo   = document.getElementById('noQrInfo');
-    var testBanner = document.getElementById('testBanner');
-    var infoPanel  = document.getElementById('infoPanel');
-    var infoLocName = document.getElementById('infoLocationName');
-
-    if (state.toBldId !== null) {
-      var m = Math.round(state.routeDistance * METERS_PER_PX);
-      var fromName = state.activeQrName || 'точки';
-      routeInfo.innerHTML =
-        'От <strong>' + fromName + '</strong> до <strong>Корпуса ' + state.toBldId +
-        '</strong> <span class="distance-badge">≈ ' + m + ' м</span>';
-      routePanel.classList.remove('hidden');
-    } else {
-      routePanel.classList.add('hidden');
-    }
-
-    if (hasStart()) {
-      qrInfoName.textContent = state.activeQrName;
-      qrInfo.classList.remove('hidden');
-      noQrInfo.classList.add('hidden');
-      infoLocName.textContent = state.activeQrName || 'точке';
-      infoPanel.classList.remove('hidden');
-      var btnRouteReset2 = document.getElementById('btnRouteReset2');
-      btnRouteReset2.classList.toggle('hidden', state.toBldId === null);
-    } else {
-      qrInfo.classList.add('hidden');
-      infoPanel.classList.add('hidden');
-      if (isDebug) {
-        noQrInfo.classList.add('hidden');
-      } else {
-        noQrInfo.classList.remove('hidden');
-      }
-    }
-
-    testBanner.classList.toggle('hidden', !isTestMode);
-
-    if (state.mapSelectMode) {
-      banner.classList.remove('hidden');
-      canvas.classList.add('pointer');
-      btnMap.classList.add('hidden');
-    } else {
-      banner.classList.add('hidden');
-      canvas.classList.remove('pointer');
-      if (isDebug) {
-        btnMap.classList.toggle('hidden', hasStart());
-      } else {
-        btnMap.classList.add('hidden');
-      }
-    }
-
-    updateTableHighlight();
-  }
-
-  function render(ts) {
-    if (animState.active) {
-      updateAnimation(ts || performance.now());
-    }
-
-    lerpViewport();
-
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, IMG_W, IMG_H);
-
-    ctx.setTransform(viewport.scale, 0, 0, viewport.scale, viewport.offsetX, viewport.offsetY);
-
-    drawMapImage();
-    drawQrDots();
-
-    var sorted = BUILDINGS.slice().sort(function(a, b) { return (a.gy + a.gx) - (b.gy + b.gx); });
-    sorted.forEach(function(b) { drawFlatBuilding(b); });
-    sorted.forEach(function(b) { drawBuildingLabel(b); });
-
-    drawRoutePath();
-    drawCallouts();
-
-    if (hasStart()) drawStartMarker();
-    if (state.toBldId !== null) {
-      var toBld = BUILDINGS.find(function(b) { return b.id === state.toBldId; });
-      if (toBld) drawDestinationMarker(toBld);
-    }
-
-    if (hasStart() || state.mapSelectMode || animState.active || isViewportAnimating()) {
-      requestAnimationFrame(render);
-    }
-  }
-
-  function requestRender() {
-    if (!hasStart() && !state.mapSelectMode && !animState.active && !isViewportAnimating()) {
-      render();
-    }
-  }
-
-  canvas.addEventListener('touchstart', function(e) {
-    e.preventDefault();
-    touchMoved = false;
-    var touches = e.touches;
-    if (touches.length === 1) {
-      var scaleFac = getScaleFactor();
-      var t = touches[0];
-      var ix = (t.clientX - canvas.getBoundingClientRect().left) * scaleFac.x;
-      var iy = (t.clientY - canvas.getBoundingClientRect().top) * scaleFac.y;
-      touchState.mode = 'pan';
-      touchState.startX = ix;
-      touchState.startY = iy;
-      touchState.startOffsetX = viewport.offsetX;
-      touchState.startOffsetY = viewport.offsetY;
-      viewport.targetOffsetX = viewport.offsetX;
-      viewport.targetOffsetY = viewport.offsetY;
-    } else if (touches.length === 2) {
-      dismissHint();
-      var scaleFac = getScaleFactor();
-      var t0 = touches[0], t1 = touches[1];
-      var ix0 = (t0.clientX - canvas.getBoundingClientRect().left) * scaleFac.x;
-      var iy0 = (t0.clientY - canvas.getBoundingClientRect().top) * scaleFac.y;
-      var ix1 = (t1.clientX - canvas.getBoundingClientRect().left) * scaleFac.x;
-      var iy1 = (t1.clientY - canvas.getBoundingClientRect().top) * scaleFac.y;
-      var dx = ix1 - ix0, dy = iy1 - iy0;
-      touchState.mode = 'pinch';
-      touchState.pinchDist0 = Math.sqrt(dx * dx + dy * dy);
-      touchState.pinchMidX = (ix0 + ix1) / 2;
-      touchState.pinchMidY = (iy0 + iy1) / 2;
-      touchState.pinchStartScale = viewport.scale;
-      touchState.pinchStartOffsetX = viewport.offsetX;
-      touchState.pinchStartOffsetY = viewport.offsetY;
-      viewport.targetScale = viewport.scale;
-      viewport.targetOffsetX = viewport.offsetX;
-      viewport.targetOffsetY = viewport.offsetY;
-    }
-  }, { passive: false });
-
-  canvas.addEventListener('touchmove', function(e) {
-    e.preventDefault();
-    var touches = e.touches;
-    var scaleFac = getScaleFactor();
-    if (touches.length === 1 && touchState.mode === 'pan') {
-      var t = touches[0];
-      var ix = (t.clientX - canvas.getBoundingClientRect().left) * scaleFac.x;
-      var iy = (t.clientY - canvas.getBoundingClientRect().top) * scaleFac.y;
-      if (Math.abs(ix - touchState.startX) > 4 || Math.abs(iy - touchState.startY) > 4) {
-        touchMoved = true;
-      }
-      viewport.targetOffsetX = touchState.startOffsetX + (ix - touchState.startX);
-      viewport.targetOffsetY = touchState.startOffsetY + (iy - touchState.startY);
-    } else if (touches.length === 2 && touchState.mode === 'pinch') {
-      touchMoved = true;
-      var t0 = touches[0], t1 = touches[1];
-      var ix0 = (t0.clientX - canvas.getBoundingClientRect().left) * scaleFac.x;
-      var iy0 = (t0.clientY - canvas.getBoundingClientRect().top) * scaleFac.y;
-      var ix1 = (t1.clientX - canvas.getBoundingClientRect().left) * scaleFac.x;
-      var iy1 = (t1.clientY - canvas.getBoundingClientRect().top) * scaleFac.y;
-      var dx = ix1 - ix0, dy = iy1 - iy0;
-      var dist = Math.sqrt(dx * dx + dy * dy);
-      var midX = (ix0 + ix1) / 2;
-      var midY = (iy0 + iy1) / 2;
-      var ratio = touchState.pinchDist0 > 0 ? dist / touchState.pinchDist0 : 1;
-      var newScale = Math.min(4, Math.max(0.7, touchState.pinchStartScale * ratio));
-      var gxMid = (touchState.pinchMidX - touchState.pinchStartOffsetX) / touchState.pinchStartScale;
-      var gyMid = (touchState.pinchMidY - touchState.pinchStartOffsetY) / touchState.pinchStartScale;
-      viewport.targetScale = newScale;
-      viewport.targetOffsetX = midX - gxMid * newScale;
-      viewport.targetOffsetY = midY - gyMid * newScale;
-    }
-    if (!isViewportAnimating()) {
-      viewport.scale = viewport.targetScale;
-      viewport.offsetX = viewport.targetOffsetX;
-      viewport.offsetY = viewport.targetOffsetY;
-    }
-    render();
-  }, { passive: false });
-
-  canvas.addEventListener('touchend', function(e) {
-    if (e.touches.length === 0) {
-      touchState.mode = null;
-    } else if (e.touches.length === 1 && touchState.mode === 'pinch') {
-      var scaleFac = getScaleFactor();
-      var t = e.touches[0];
-      var ix = (t.clientX - canvas.getBoundingClientRect().left) * scaleFac.x;
-      var iy = (t.clientY - canvas.getBoundingClientRect().top) * scaleFac.y;
-      touchState.mode = 'pan';
-      touchState.startX = ix;
-      touchState.startY = iy;
-      touchState.startOffsetX = viewport.targetOffsetX;
-      touchState.startOffsetY = viewport.targetOffsetY;
-    }
-  });
-
-  canvas.addEventListener('wheel', function(e) {
-    e.preventDefault();
-    dismissHint();
-    var scaleFac = getScaleFactor();
-    var rect = canvas.getBoundingClientRect();
-    var ix = (e.clientX - rect.left) * scaleFac.x;
-    var iy = (e.clientY - rect.top) * scaleFac.y;
-    var gx = (ix - viewport.offsetX) / viewport.scale;
-    var gy = (iy - viewport.offsetY) / viewport.scale;
-    var factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-    var newScale = Math.min(4, Math.max(0.7, viewport.scale * factor));
-    viewport.targetScale = newScale;
-    viewport.targetOffsetX = ix - gx * newScale;
-    viewport.targetOffsetY = iy - gy * newScale;
-    viewport.scale = viewport.targetScale;
-    viewport.offsetX = viewport.targetOffsetX;
-    viewport.offsetY = viewport.targetOffsetY;
-    render();
-  }, { passive: false });
-
   document.getElementById('btnZoomReset').addEventListener('click', function() {
-    resetViewport();
-  });
-
-  document.getElementById('btnRouteReset2').addEventListener('click', function() {
-    clearRoute();
-  });
-
-  canvas.addEventListener('click', function(e) {
-    if (touchMoved) { touchMoved = false; return; }
-    var coords = getCanvasCoords(e);
-    console.log('Click:', Math.round(coords.x), Math.round(coords.y));
-    var bld = hitTestBuilding(coords.x, coords.y);
-    var callout = hitTestCallout(coords.x, coords.y);
-
-    if (state.mapSelectMode && isDebug) {
-      if (!bld && !callout) {
-        setMapPin(coords.x, coords.y);
-      }
-      return;
-    }
-
-    if (callout && hasStart()) {
-      setRoute(callout.buildingId);
-      return;
-    }
-
-    if (bld && hasStart()) {
-      setRoute(bld.id);
-    }
-  });
-
-  canvas.addEventListener('mousemove', function(e) {
-    if (state.mapSelectMode) return;
-    var coords = getCanvasCoords(e);
-    var bld = hitTestBuilding(coords.x, coords.y);
-    var callout = hitTestCallout(coords.x, coords.y);
-    var prevBld = state.hoveredBldId;
-    var prevCallout = state.hoveredCalloutId;
-    state.hoveredBldId = bld ? bld.id : null;
-    state.hoveredCalloutId = callout ? callout.id : null;
-    if (prevBld !== state.hoveredBldId || prevCallout !== state.hoveredCalloutId) {
-      canvas.classList.toggle('pointer', ((state.hoveredBldId !== null || state.hoveredCalloutId !== null) && hasStart()));
-      requestRender();
-    }
-  });
-
-  canvas.addEventListener('mouseleave', function() {
-    if (state.hoveredBldId !== null || state.hoveredCalloutId !== null) {
-      state.hoveredBldId = null;
-      state.hoveredCalloutId = null;
-      canvas.classList.remove('pointer');
-      requestRender();
-    }
-  });
-
-  window.addEventListener('resize', function() {
-    requestRender();
-  });
-
-  document.getElementById('btnSelectMap').addEventListener('click', function() {
-    if (!isDebug) return;
-    state.mapSelectMode = true;
-    updateUI();
-    render();
+    map.setView(hasStart() ? INIT_CENTER : [IMG_H / 2, IMG_W / 2], hasStart() ? INIT_ZOOM : 1, { animate: true, duration: 0.5 });
   });
 
   document.getElementById('btnReset').addEventListener('click', function() {
@@ -1688,8 +908,7 @@
 
   document.getElementById('testBannerClose').addEventListener('click', function() {
     isTestMode = false;
-    var testBanner = document.getElementById('testBanner');
-    testBanner.classList.add('hidden');
+    document.getElementById('testBanner').classList.add('hidden');
   });
 
   function initFromURL() {
@@ -1703,12 +922,13 @@
         if (valid.indexOf(qrParam) !== -1) {
           isTestMode = false;
           initGraph();
+          refreshCalloutMarkers();
           setQrPoint(qrParam);
           return;
         }
         isTestMode = false;
         initGraph();
-        render();
+        refreshCalloutMarkers();
         updateUI();
         return;
       }
@@ -1716,22 +936,27 @@
       if (isDebug) {
         isTestMode = false;
         initGraph();
-        render();
+        refreshCalloutMarkers();
         updateUI();
         return;
       }
 
       isTestMode = true;
       initGraph();
+      refreshCalloutMarkers();
       setQrPoint('qr_gate');
       return;
     } catch (e) {}
     isTestMode = true;
     initGraph();
+    refreshCalloutMarkers();
     setQrPoint('qr_gate');
   }
 
-  loadMapImage();
+  window.addEventListener('resize', function() {
+    map.invalidateSize();
+  });
+
   initFromURL();
   initBuildingsTable();
 })();
