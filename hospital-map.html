@@ -35,40 +35,36 @@
         }
 
         .header-left {
-            width: 700px;
-            max-width: 65%;
+            max-width: 70%;
         }
 
         .hospital-name {
             font-size: 20px;
             font-weight: 800;
             color: #1a1a2e;
-            letter-spacing: -0.3px;
         }
 
         .subtitle {
-            font-size: 13px;
+            font-size: 12px;
             color: #1565C0;
             font-weight: 500;
-            margin-top: 4px;
+            margin-top: 2px;
         }
 
         .btn-fullscreen {
             background: #1565C0;
             color: white;
             border: none;
-            padding: 8px 20px;
+            padding: 8px 16px;
             border-radius: 30px;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-            transition: 0.1s linear;
             white-space: nowrap;
         }
         .btn-fullscreen:active { transform: scale(0.96); }
 
-        /* ===== КОНТЕЙНЕР КАРТЫ ===== */
+        /* ===== КАРТА ===== */
         .map-area {
             position: relative;
             overflow-x: auto;
@@ -79,16 +75,14 @@
 
         .map-wrapper {
             position: relative;
-            width: 4078px;          /* 2016 * 2.023 */
             height: 100%;
+            display: inline-block;
         }
 
         #map-image {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4078px;
-            height: auto;
+            display: block;
+            height: 100%;
+            width: auto;
             pointer-events: none;
         }
 
@@ -198,7 +192,6 @@
             padding: 8px 20px;
             cursor: pointer;
             border-bottom: 1px solid #eee;
-            transition: background 0.1s;
         }
         .building-item:active { background: #E3F2FD; }
         .building-num {
@@ -300,10 +293,6 @@
 <script>
     // === ДАННЫЕ ===
     const IMG_W = 2016, IMG_H = 864;
-    const SCALE_FACTOR = 2.023;   // 1748 / 864
-    const DISPLAY_W = IMG_W * SCALE_FACTOR;
-    const DISPLAY_H = IMG_H * SCALE_FACTOR;
-
     const METERS_PER_PX = 0.25;
 
     const BUILDINGS = [
@@ -373,46 +362,33 @@
         return { nodes: path, distance: dist[toKey] };
     }
 
+    // === РАБОТА С КАРТОЙ ===
+    let currentScale = 1;
+    let mapImage = document.getElementById('map-image');
+    let mapWrapper = document.getElementById('mapWrapper');
+    let mapArea = document.getElementById('mapArea');
+    let routeCanvas = document.getElementById('route-canvas');
+    let ctx = routeCanvas.getContext('2d');
+
+    function updateImageScale() {
+        const containerHeight = mapArea.clientHeight;
+        if (containerHeight <= 0) return;
+        currentScale = containerHeight / IMG_H;
+        const newWidth = IMG_W * currentScale;
+        mapImage.style.height = `${containerHeight}px`;
+        mapImage.style.width = `${newWidth}px`;
+        mapWrapper.style.width = `${newWidth}px`;
+    }
+
     function scaleCoord(gx, gy) {
-        return { x: gx * SCALE_FACTOR, y: gy * SCALE_FACTOR };
+        return { x: gx * currentScale, y: gy * currentScale };
     }
 
-    // === ДИНАМИЧЕСКАЯ ВЫСОТА ===
-    function resizeLayout() {
-        const availableHeight = window.innerHeight;
-        const header = document.querySelector('.header');
-        const mapArea = document.querySelector('.map-area');
-        const bottomPanel = document.querySelector('.bottom-panel');
-
-        const headerHeight = availableHeight * 0.11;
-        const panelHeight = availableHeight * 0.222;
-        const mapHeight = availableHeight * 0.667;
-
-        header.style.height = `${headerHeight}px`;
-        mapArea.style.height = `${mapHeight}px`;
-        bottomPanel.style.height = `${panelHeight}px`;
-
-        if (typeof updateMarkers === 'function') updateMarkers();
-        if (typeof drawRoute === 'function') drawRoute();
-    }
-
-    // === ЭЛЕМЕНТЫ ===
-    const mapArea = document.getElementById('mapArea');
-    const mapWrapper = document.getElementById('mapWrapper');
-    const mapImage = document.getElementById('map-image');
-    const routeCanvas = document.getElementById('route-canvas');
-    const ctx = routeCanvas.getContext('2d');
-    const buildingsList = document.getElementById('buildingsList');
-    const bottomPanel = document.getElementById('bottomPanel');
-    const panelHeader = document.getElementById('panelHeader');
-    const panelArrow = document.getElementById('panelArrow');
-
+    let markers = { buildings: {}, callouts: {}, start: null };
     let state = {
         startKey: 'qr_gate', startGx: 1301, startGy: 684,
         toBldId: null, routeDistance: 0, currentRouteNodes: null
     };
-
-    let markers = { buildings: {}, callouts: {}, start: null };
 
     function updateMarkers() {
         const scrollLeft = mapArea.scrollLeft;
@@ -534,6 +510,7 @@
     }
 
     function renderBuildingsList() {
+        const buildingsList = document.getElementById('buildingsList');
         buildingsList.innerHTML = '';
         BUILDINGS.forEach(b => {
             const div = document.createElement('div');
@@ -556,8 +533,6 @@
             state.startKey = 'qr_gate';
             state.startGx = 1301;
             state.startGy = 684;
-        } else {
-            state.startKey = 'qr_gate';
         }
         updateMarkers();
     }
@@ -568,53 +543,57 @@
         mapArea.scrollLeft = Math.max(0, targetScroll);
     }
 
-    // === УПРАВЛЕНИЕ ПАНЕЛЬЮ ===
-    let panelOpen = false;
-    function togglePanel() {
-        const list = document.querySelector('.buildings-list');
-        const hint = document.querySelector('.hint-text');
-        if (!panelOpen) {
-            list.style.display = 'block';
-            hint.style.display = 'none';
-            panelArrow.classList.add('open');
-            panelOpen = true;
-        } else {
-            list.style.display = 'none';
-            hint.style.display = 'block';
-            panelArrow.classList.remove('open');
-            panelOpen = false;
-        }
+    function resizeLayout() {
+        const availableHeight = window.innerHeight;
+        const header = document.querySelector('.header');
+        const mapAreaEl = document.querySelector('.map-area');
+        const bottomPanel = document.querySelector('.bottom-panel');
+
+        const headerHeight = availableHeight * 0.11;
+        const panelHeight = availableHeight * 0.222;
+        const mapHeight = availableHeight * 0.667;
+
+        header.style.height = `${headerHeight}px`;
+        mapAreaEl.style.height = `${mapHeight}px`;
+        bottomPanel.style.height = `${panelHeight}px`;
+
+        updateImageScale();
+        updateMarkers();
+        drawRoute();
+        scrollToKPP();
     }
 
-    // === СОБЫТИЯ ===
+    // СОБЫТИЯ
     document.getElementById('openFullscreenBtn').addEventListener('click', () => {
         window.open('hospital-map.png', '_blank');
     });
     document.getElementById('btnReset').addEventListener('click', clearRoute);
-    panelHeader.addEventListener('click', togglePanel);
+    document.getElementById('panelHeader').addEventListener('click', () => {
+        const list = document.querySelector('.buildings-list');
+        const hint = document.querySelector('.hint-text');
+        const arrow = document.getElementById('panelArrow');
+        if (list.style.display === 'none') {
+            list.style.display = 'block';
+            hint.style.display = 'none';
+            arrow.classList.add('open');
+        } else {
+            list.style.display = 'none';
+            hint.style.display = 'block';
+            arrow.classList.remove('open');
+        }
+    });
 
     mapArea.addEventListener('scroll', () => {
         updateMarkers();
         drawRoute();
     });
-    window.addEventListener('resize', () => {
-        resizeLayout();
-        scrollToKPP();
-        updateMarkers();
-        drawRoute();
-    });
+    window.addEventListener('resize', () => resizeLayout());
 
-    // ИНИЦИАЛИЗАЦИЯ
+    // СТАРТ
     initGraph();
     renderBuildingsList();
     setStartFromQR();
-    resizeLayout();      // ← главный фикс для телефона
-    scrollToKPP();
-    updateMarkers();
-    drawRoute();
-    updateUI();
-
-    // Скрываем список при старте
+    resizeLayout();
     document.querySelector('.buildings-list').style.display = 'none';
 </script>
 </body>
