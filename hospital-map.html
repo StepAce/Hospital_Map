@@ -209,10 +209,130 @@
     height: auto;
     aspect-ratio: 2016 / 864;
     cursor: default;
-    touch-action: manipulation;
+    touch-action: none;
   }
 
   canvas.pointer { cursor: crosshair; }
+
+  .info-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    min-height: 13vh;
+    max-height: 18vh;
+    background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.78) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 7px;
+    z-index: 5;
+    border-radius: 14px 14px 0 0;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    pointer-events: auto;
+    animation: slideDown 0.35s ease-out;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .info-location {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .info-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .btn-sm {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 13px;
+    border: none;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.10);
+    white-space: nowrap;
+    background: #ECEFF1;
+    color: #37474F;
+  }
+  .btn-sm:active { transform: scale(0.95); }
+  .btn-sm-reset {
+    background: #FFEBEE;
+    color: #C62828;
+  }
+  .btn-sm-reset:active { background: #FFCDD2; }
+
+  .zoom-hint {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.78);
+    color: #FFFFFF;
+    border-radius: 16px;
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 10;
+    pointer-events: none;
+    animation: fadeInUp 0.5s ease-out;
+    transition: opacity 0.4s;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  }
+  .zoom-hint.hiding { opacity: 0; }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  .zoom-hint-fingers {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .zoom-hint-fingers .finger {
+    font-size: 30px;
+    display: inline-block;
+    line-height: 1;
+  }
+  .zoom-hint-fingers .finger.left {
+    animation: pinchLeft 1.3s ease-in-out infinite;
+  }
+  .zoom-hint-fingers .finger.right {
+    animation: pinchRight 1.3s ease-in-out infinite;
+  }
+  @keyframes pinchLeft {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(7px); }
+  }
+  @keyframes pinchRight {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-7px); }
+  }
+  .zoom-hint-text {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.35;
+    max-width: 160px;
+    text-align: left;
+  }
 
   .selection-banner {
     position: absolute;
@@ -424,6 +544,12 @@
     .bld-badge { width: 28px; height: 28px; font-size: 14px; }
     .legend { gap: 10px; }
     .legend-item { font-size: 12px; }
+    .info-panel { min-height: 11vh; padding: 8px 10px; border-radius: 10px 10px 0 0; }
+    .info-location { font-size: 13px; }
+    .btn-sm { font-size: 12px; padding: 7px 11px; }
+    .zoom-hint { padding: 8px 12px; border-radius: 12px; bottom: 10px; }
+    .zoom-hint-fingers .finger { font-size: 24px; }
+    .zoom-hint-text { font-size: 11px; max-width: 130px; }
   }
 </style>
 </head>
@@ -442,6 +568,20 @@
     <div class="map-column">
       <div class="map-wrapper" id="mapWrapper">
         <canvas id="map"></canvas>
+        <div class="info-panel hidden" id="infoPanel">
+          <div class="info-location">📍 Вы у: <strong id="infoLocationName"></strong></div>
+          <div class="info-actions">
+            <button class="btn-sm" id="btnZoomReset">↺ Сбросить зум</button>
+            <button class="btn-sm btn-sm-reset" id="btnRouteReset2">✕ Сбросить маршрут</button>
+          </div>
+        </div>
+        <div class="zoom-hint hidden" id="zoomHint">
+          <div class="zoom-hint-fingers">
+            <span class="finger left">👆</span>
+            <span class="finger right">👆</span>
+          </div>
+          <span class="zoom-hint-text">Сведи пальцы, чтобы увидеть весь план</span>
+        </div>
         <div class="selection-banner hidden" id="selectionBanner">Кликните по карте, чтобы отметить точку</div>
       </div>
     </div>
@@ -656,6 +796,37 @@
     targetBldId: null,
   };
 
+  var viewport = {
+    scale: 1,
+    offsetX: 0,
+    offsetY: 0,
+    targetScale: 1,
+    targetOffsetX: 0,
+    targetOffsetY: 0,
+    initScale: 1,
+    initOffsetX: 0,
+    initOffsetY: 0,
+  };
+
+  var touchState = {
+    mode: null,
+    startX: 0,
+    startY: 0,
+    startOffsetX: 0,
+    startOffsetY: 0,
+    startScale: 1,
+    pinchDist0: 0,
+    pinchMidX: 0,
+    pinchMidY: 0,
+    pinchStartScale: 1,
+    pinchStartOffsetX: 0,
+    pinchStartOffsetY: 0,
+  };
+
+  var hintTimer = null;
+  var hintDismissed = false;
+  var touchMoved = false;
+
   function loadMapImage() {
     mapImage = new Image();
     mapImage.onload = function() { render(); };
@@ -679,6 +850,77 @@
 
   function easeOutCubic(t) {
     return 1 - Math.pow(1 - t, 3);
+  }
+
+  function initViewport() {
+    if (!hasStart()) return;
+    var cx = state.startGx;
+    var cy = state.startGy;
+    var s = 2.0;
+    viewport.scale = 1;
+    viewport.offsetX = 0;
+    viewport.offsetY = 0;
+    viewport.targetScale = s;
+    viewport.targetOffsetX = IMG_W / 2 - cx * s;
+    viewport.targetOffsetY = IMG_H / 2 - cy * s;
+    viewport.initScale = s;
+    viewport.initOffsetX = viewport.targetOffsetX;
+    viewport.initOffsetY = viewport.targetOffsetY;
+  }
+
+  function resetViewport() {
+    viewport.targetScale = viewport.initScale;
+    viewport.targetOffsetX = viewport.initOffsetX;
+    viewport.targetOffsetY = viewport.initOffsetY;
+    if (!hasStart()) {
+      viewport.targetScale = 1;
+      viewport.targetOffsetX = 0;
+      viewport.targetOffsetY = 0;
+    }
+    render();
+  }
+
+  function isViewportAnimating() {
+    return Math.abs(viewport.scale - viewport.targetScale) > 0.001
+        || Math.abs(viewport.offsetX - viewport.targetOffsetX) > 0.15
+        || Math.abs(viewport.offsetY - viewport.targetOffsetY) > 0.15;
+  }
+
+  function lerpViewport() {
+    if (!isViewportAnimating()) {
+      viewport.scale = viewport.targetScale;
+      viewport.offsetX = viewport.targetOffsetX;
+      viewport.offsetY = viewport.targetOffsetY;
+      return false;
+    }
+    var f = 0.14;
+    viewport.scale += (viewport.targetScale - viewport.scale) * f;
+    viewport.offsetX += (viewport.targetOffsetX - viewport.offsetX) * f;
+    viewport.offsetY += (viewport.targetOffsetY - viewport.offsetY) * f;
+    return true;
+  }
+
+  function dismissHint() {
+    if (hintDismissed) return;
+    hintDismissed = true;
+    if (hintTimer) { clearTimeout(hintTimer); hintTimer = null; }
+    var el = document.getElementById('zoomHint');
+    if (el) {
+      el.classList.add('hiding');
+      setTimeout(function() { el.classList.add('hidden'); }, 400);
+    }
+  }
+
+  function scheduleHint() {
+    if (hintDismissed) return;
+    hintTimer = setTimeout(function() {
+      if (hintDismissed) return;
+      var el = document.getElementById('zoomHint');
+      if (el) el.classList.remove('hidden');
+      hintTimer = setTimeout(function() {
+        dismissHint();
+      }, 5000);
+    }, 1000);
   }
 
   function getAnimatedPath(fullPath, t) {
@@ -1001,7 +1243,9 @@
   function getCanvasCoords(e) {
     var rect = canvas.getBoundingClientRect();
     var scale = getScaleFactor();
-    return { x: (e.clientX - rect.left) * scale.x, y: (e.clientY - rect.top) * scale.y };
+    var ix = (e.clientX - rect.left) * scale.x;
+    var iy = (e.clientY - rect.top) * scale.y;
+    return { x: (ix - viewport.offsetX) / viewport.scale, y: (iy - viewport.offsetY) / viewport.scale };
   }
 
   function handleTableRowClick(bldId) {
@@ -1052,8 +1296,10 @@
     state.startGy = qr.gy;
     state.startKey = qr.id;
     clearRoute();
+    initViewport();
     updateUI();
     render();
+    scheduleHint();
   }
 
   function setMapPin(sx, sy) {
@@ -1112,6 +1358,8 @@
     var qrInfoName = document.getElementById('qrInfoName');
     var noQrInfo   = document.getElementById('noQrInfo');
     var testBanner = document.getElementById('testBanner');
+    var infoPanel  = document.getElementById('infoPanel');
+    var infoLocName = document.getElementById('infoLocationName');
 
     if (state.toBldId !== null) {
       var m = Math.round(state.routeDistance * METERS_PER_PX);
@@ -1128,8 +1376,11 @@
       qrInfoName.textContent = state.activeQrName;
       qrInfo.classList.remove('hidden');
       noQrInfo.classList.add('hidden');
+      infoLocName.textContent = state.activeQrName || 'точке';
+      infoPanel.classList.remove('hidden');
     } else {
       qrInfo.classList.add('hidden');
+      infoPanel.classList.add('hidden');
       if (isDebug) {
         noQrInfo.classList.add('hidden');
       } else {
@@ -1161,7 +1412,12 @@
       updateAnimation(ts || performance.now());
     }
 
+    lerpViewport();
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, IMG_W, IMG_H);
+
+    ctx.setTransform(viewport.scale, 0, 0, viewport.scale, viewport.offsetX, viewport.offsetY);
 
     drawMapImage();
     drawQrDots();
@@ -1179,18 +1435,141 @@
       if (toBld) drawDestinationMarker(toBld);
     }
 
-    if (hasStart() || state.mapSelectMode || animState.active) {
+    if (hasStart() || state.mapSelectMode || animState.active || isViewportAnimating()) {
       requestAnimationFrame(render);
     }
   }
 
   function requestRender() {
-    if (!hasStart() && !state.mapSelectMode && !animState.active) {
+    if (!hasStart() && !state.mapSelectMode && !animState.active && !isViewportAnimating()) {
       render();
     }
   }
 
+  canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    touchMoved = false;
+    var touches = e.touches;
+    if (touches.length === 1) {
+      var scaleFac = getScaleFactor();
+      var t = touches[0];
+      var ix = (t.clientX - canvas.getBoundingClientRect().left) * scaleFac.x;
+      var iy = (t.clientY - canvas.getBoundingClientRect().top) * scaleFac.y;
+      touchState.mode = 'pan';
+      touchState.startX = ix;
+      touchState.startY = iy;
+      touchState.startOffsetX = viewport.offsetX;
+      touchState.startOffsetY = viewport.offsetY;
+      viewport.targetOffsetX = viewport.offsetX;
+      viewport.targetOffsetY = viewport.offsetY;
+    } else if (touches.length === 2) {
+      dismissHint();
+      var scaleFac = getScaleFactor();
+      var t0 = touches[0], t1 = touches[1];
+      var ix0 = (t0.clientX - canvas.getBoundingClientRect().left) * scaleFac.x;
+      var iy0 = (t0.clientY - canvas.getBoundingClientRect().top) * scaleFac.y;
+      var ix1 = (t1.clientX - canvas.getBoundingClientRect().left) * scaleFac.x;
+      var iy1 = (t1.clientY - canvas.getBoundingClientRect().top) * scaleFac.y;
+      var dx = ix1 - ix0, dy = iy1 - iy0;
+      touchState.mode = 'pinch';
+      touchState.pinchDist0 = Math.sqrt(dx * dx + dy * dy);
+      touchState.pinchMidX = (ix0 + ix1) / 2;
+      touchState.pinchMidY = (iy0 + iy1) / 2;
+      touchState.pinchStartScale = viewport.scale;
+      touchState.pinchStartOffsetX = viewport.offsetX;
+      touchState.pinchStartOffsetY = viewport.offsetY;
+      viewport.targetScale = viewport.scale;
+      viewport.targetOffsetX = viewport.offsetX;
+      viewport.targetOffsetY = viewport.offsetY;
+    }
+  }, { passive: false });
+
+  canvas.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    var touches = e.touches;
+    var scaleFac = getScaleFactor();
+    if (touches.length === 1 && touchState.mode === 'pan') {
+      var t = touches[0];
+      var ix = (t.clientX - canvas.getBoundingClientRect().left) * scaleFac.x;
+      var iy = (t.clientY - canvas.getBoundingClientRect().top) * scaleFac.y;
+      if (Math.abs(ix - touchState.startX) > 4 || Math.abs(iy - touchState.startY) > 4) {
+        touchMoved = true;
+      }
+      viewport.targetOffsetX = touchState.startOffsetX + (ix - touchState.startX);
+      viewport.targetOffsetY = touchState.startOffsetY + (iy - touchState.startY);
+    } else if (touches.length === 2 && touchState.mode === 'pinch') {
+      touchMoved = true;
+      var t0 = touches[0], t1 = touches[1];
+      var ix0 = (t0.clientX - canvas.getBoundingClientRect().left) * scaleFac.x;
+      var iy0 = (t0.clientY - canvas.getBoundingClientRect().top) * scaleFac.y;
+      var ix1 = (t1.clientX - canvas.getBoundingClientRect().left) * scaleFac.x;
+      var iy1 = (t1.clientY - canvas.getBoundingClientRect().top) * scaleFac.y;
+      var dx = ix1 - ix0, dy = iy1 - iy0;
+      var dist = Math.sqrt(dx * dx + dy * dy);
+      var midX = (ix0 + ix1) / 2;
+      var midY = (iy0 + iy1) / 2;
+      var ratio = touchState.pinchDist0 > 0 ? dist / touchState.pinchDist0 : 1;
+      var newScale = Math.min(4, Math.max(0.7, touchState.pinchStartScale * ratio));
+      var gxMid = (touchState.pinchMidX - touchState.pinchStartOffsetX) / touchState.pinchStartScale;
+      var gyMid = (touchState.pinchMidY - touchState.pinchStartOffsetY) / touchState.pinchStartScale;
+      viewport.targetScale = newScale;
+      viewport.targetOffsetX = midX - gxMid * newScale;
+      viewport.targetOffsetY = midY - gyMid * newScale;
+    }
+    if (!isViewportAnimating()) {
+      viewport.scale = viewport.targetScale;
+      viewport.offsetX = viewport.targetOffsetX;
+      viewport.offsetY = viewport.targetOffsetY;
+    }
+    render();
+  }, { passive: false });
+
+  canvas.addEventListener('touchend', function(e) {
+    if (e.touches.length === 0) {
+      touchState.mode = null;
+    } else if (e.touches.length === 1 && touchState.mode === 'pinch') {
+      var scaleFac = getScaleFactor();
+      var t = e.touches[0];
+      var ix = (t.clientX - canvas.getBoundingClientRect().left) * scaleFac.x;
+      var iy = (t.clientY - canvas.getBoundingClientRect().top) * scaleFac.y;
+      touchState.mode = 'pan';
+      touchState.startX = ix;
+      touchState.startY = iy;
+      touchState.startOffsetX = viewport.targetOffsetX;
+      touchState.startOffsetY = viewport.targetOffsetY;
+    }
+  });
+
+  canvas.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    dismissHint();
+    var scaleFac = getScaleFactor();
+    var rect = canvas.getBoundingClientRect();
+    var ix = (e.clientX - rect.left) * scaleFac.x;
+    var iy = (e.clientY - rect.top) * scaleFac.y;
+    var gx = (ix - viewport.offsetX) / viewport.scale;
+    var gy = (iy - viewport.offsetY) / viewport.scale;
+    var factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+    var newScale = Math.min(4, Math.max(0.7, viewport.scale * factor));
+    viewport.targetScale = newScale;
+    viewport.targetOffsetX = ix - gx * newScale;
+    viewport.targetOffsetY = iy - gy * newScale;
+    viewport.scale = viewport.targetScale;
+    viewport.offsetX = viewport.targetOffsetX;
+    viewport.offsetY = viewport.targetOffsetY;
+    render();
+  }, { passive: false });
+
+  document.getElementById('btnZoomReset').addEventListener('click', function() {
+    resetViewport();
+  });
+
+  document.getElementById('btnRouteReset2').addEventListener('click', function() {
+    clearRoute();
+  });
+
   canvas.addEventListener('click', function(e) {
+    if (touchMoved) { touchMoved = false; return; }
     var coords = getCanvasCoords(e);
     console.log('Click:', Math.round(coords.x), Math.round(coords.y));
     var bld = hitTestBuilding(coords.x, coords.y);
