@@ -393,6 +393,7 @@
         scale = fitScale;
         translateX = (rect.width - IMG_W * scale) / 2;
         translateY = (rect.height - IMG_H * scale) / 2;
+        clampBounds();
         updateTransform();
     }
     
@@ -631,9 +632,7 @@
         }
     });
     
-    container.addEventListener('touchend', () => {
-        isPanning = false;
-    });
+    container.addEventListener('touchend', () => { isPanning = false; });
     
     // Двойной тап — zoom to fit
     let lastTap = 0;
