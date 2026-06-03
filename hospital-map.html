@@ -580,42 +580,55 @@
     });
     
     container.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 2) {
-            e.preventDefault();
-            const newDistance = getDistance(e.touches);
-            scale = initialScale * (newDistance / initialDistance);
-            scale = Math.min(Math.max(scale, 0.2), 3);
-            
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        const newDistance = getDistance(e.touches);
+        const scaleChange = newDistance / initialDistance;
+        const newScale = initialScale * scaleChange;
+        if (newScale >= 0.2 && newScale <= 3) {
             const rect = container.getBoundingClientRect();
             const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
             const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-            translateX = initialTranslateX - (centerX - rect.width/2) * (scale - initialScale);
-            translateY = initialTranslateY - (centerY - rect.height/2) * (scale - initialScale);
-            updateTransform();
-        } else if (e.touches.length === 1 && isPanning) {
-            translateX = e.touches[0].clientX - startPanX;
-            translateY = e.touches[0].clientY - startPanY;
+            
+            // Координаты точки под пальцами в системе координат карты (до зума)
+            const px = (centerX - initialTranslateX) / initialScale;
+            const py = (centerY - initialTranslateY) / initialScale;
+            
+            scale = newScale;
+            translateX = centerX - px * scale;
+            translateY = centerY - py * scale;
+            
             updateTransform();
         }
-    });
+    } else if (e.touches.length === 1 && isPanning) {
+        translateX = e.touches[0].clientX - startPanX;
+        translateY = e.touches[0].clientY - startPanY;
+        updateTransform();
+    }
+});
     
     container.addEventListener('touchend', () => { isPanning = false; });
     
     container.addEventListener('wheel', (e) => {
-        e.preventDefault();
-        const delta = e.deltaY > 0 ? 0.95 : 1.05;
-        const newScale = scale * delta;
-        if (newScale > 0.2 && newScale < 3) {
-            const rect = container.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            const scaleChange = newScale / scale;
-            translateX = mouseX - (mouseX - translateX) * scaleChange;
-            translateY = mouseY - (mouseY - translateY) * scaleChange;
-            scale = newScale;
-            updateTransform();
-        }
-    });
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.95 : 1.05;
+    const newScale = scale * delta;
+    if (newScale >= 0.2 && newScale <= 3) {
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        
+        // Координаты точки под мышкой в системе координат карты (до зума)
+        const px = (mouseX - translateX) / scale;
+        const py = (mouseY - translateY) / scale;
+        
+        scale = newScale;
+        translateX = mouseX - px * scale;
+        translateY = mouseY - py * scale;
+        
+        updateTransform();
+    }
+});
     
     window.addEventListener('resize', () => {
         setViewToKPP();
