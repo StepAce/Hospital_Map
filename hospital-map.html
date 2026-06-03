@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Карта территории больницы</title>
+<style>
+  :root {
+    --green: #2E7D32;
+    --green-light: #4CAF50;
+    --green-bg: #E8F5E9;
+    --blue: #1565C0;
+    --blue-light: #42A5F5;
+    --orange: #E67E22;
+    --white: #FFFFFF;
+    --gray: #ECEFF1;
+    --dark: #263238;
+    --shadow: 0 2px 12px rgba(0,0,0,0.12);
+    --red: #E53935;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: linear-gradient(160deg, #E8F5E9 0%, #C8E6C9 40%, #B2DFDB 100%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 10px;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 1000px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  header {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 12px 22px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  header h1 {
+    font-size: clamp(17px, 3.5vw, 22px);
+    font-weight: 700;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  header h1 .icon {
+    width: 32px; height: 32px;
+    background: var(--green);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #546E7A;
+  }
+
+  .legend-dot {
+    width: 13px; height: 13px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .legend-dot.green { background: var(--green); }
+  .legend-dot.blue { background: var(--blue); }
+  .legend-dot.orange { background: #D7CCC8; border: 1.5px solid #8D6E63; }
+
+  .map-wrapper {
+    position: relative;
+    background: var(--white);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    width: 100%;
+  }
+
+  .main-content {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .map-column {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .sidebar {
+    width: 290px;
+    flex-shrink: 0;
+    background: var(--white);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    max-height: 550px;
+  }
+
+  .sidebar-header {
+    padding: 11px 15px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--dark);
+    border-bottom: 1px solid #E0E0E0;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sidebar-table-wrapper {
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .bld-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .bld-row {
+    cursor: pointer;
+    transition: background 0.15s;
+    border-bottom: 1px solid #F5F5F5;
+  }
+  .bld-row:last-child { border-bottom: none; }
+
+  .bld-row:hover { background: #F5F5F5; }
+
+  .bld-row.highlighted {
+    background: #E3F2FD;
+  }
+
+  .bld-row.highlighted .bld-badge {
+    background: var(--blue);
+    color: #FFFFFF;
+  }
+
+  .bld-num {
+    width: 38px;
+    text-align: center;
+    padding: 8px 4px;
+    vertical-align: top;
+  }
+
+  .bld-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #EEEEEE;
+    color: #757575;
+    font-weight: 700;
+    font-size: 13px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .bld-name {
+    font-weight: 600;
+    color: var(--dark);
+    padding: 8px 2px;
+    white-space: nowrap;
+  }
+
+  .bld-depts {
+    color: #90A4AE;
+    font-size: 11px;
+    padding: 8px 10px 8px 2px;
+    line-height: 1.45;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2016 / 864;
+    cursor: default;
+    touch-action: manipulation;
+  }
+
+  canvas.pointer { cursor: crosshair; }
+
+  .selection-banner {
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(46,125,50,0.92);
+    color: white;
+    padding: 7px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    pointer-events: none;
+    animation: pulse-banner 1.5s ease-in-out infinite;
+    white-space: nowrap;
+    z-index: 2;
+  }
+
+  @keyframes pulse-banner {
+    0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+    50% { opacity: 0.8; transform: translateX(-50%) scale(1.04); }
+  }
+
+  .no-qr-info {
+    background: #FFF3E0;
+    border: 1.5px solid #FFB74D;
+    border-radius: 14px;
+    padding: 14px 18px;
+    box-shadow: var(--shadow);
+    font-size: 14px;
+    font-weight: 500;
+    color: #E65100;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.5;
+  }
+
+  .no-qr-info .warn-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .test-banner {
+    background: rgba(66,66,66,0.88);
+    color: #E0E0E0;
+    border-radius: 12px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow);
+  }
+
+  .test-banner .test-icon { font-size: 18px; flex-shrink: 0; }
+
+  .test-banner .test-text {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.4;
+  }
+
+  .test-banner .test-close {
+    background: none;
+    border: none;
+    color: #BDBDBD;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    line-height: 1;
+    box-shadow: none;
+    transition: color 0.15s;
+  }
+  .test-banner .test-close:hover {
+    color: #FFFFFF;
+    background: rgba(255,255,255,0.1);
+  }
+
+  .qr-info {
+    background: var(--white);
+    border-radius: 14px;
+    padding: 11px 18px;
+    box-shadow: var(--shadow);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .qr-info .pin-icon { font-size: 18px; }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  button {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 11px;
+    cursor: pointer;
+    transition: all 0.18s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: var(--shadow);
+    white-space: nowrap;
+  }
+
+  button:active { transform: scale(0.96); }
+
+  .btn-select {
+    background: var(--green);
+    color: white;
+  }
+  .btn-select:hover { background: #1B5E20; }
+
+  .btn-select-map {
+    background: #5C6BC0;
+    color: white;
+  }
+  .btn-select-map:hover { background: #3949AB; }
+
+  .route-panel {
+    background: var(--white);
+    border-radius: 14px;
+    padding: 13px 18px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .route-info {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--dark);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .route-info .distance-badge {
+    background: var(--blue-light);
+    color: white;
+    padding: 4px 11px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 17px;
+  }
+
+  .btn-reset {
+    background: #EF5350;
+    color: white;
+  }
+  .btn-reset:hover { background: #C62828; }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 768px) {
+    .main-content { flex-direction: column; }
+    .sidebar { width: 100%; max-height: 320px; border-radius: 14px; }
+    .bld-table { font-size: 13px; }
+    .bld-name { font-size: 13px; }
+    .bld-depts { font-size: 11px; }
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 5px; }
+    header { padding: 8px 12px; border-radius: 12px; }
+    header h1 { font-size: 15px; }
+    header h1 .icon { width: 26px; height: 26px; font-size: 15px; border-radius: 7px; }
+    button { font-size: 14px; padding: 10px 16px; border-radius: 10px; }
+    .map-wrapper { border-radius: 12px; }
+    .route-panel { padding: 10px 13px; border-radius: 12px; flex-direction: column; align-items: flex-start; }
+    .route-info { font-size: 14px; }
+    .route-info .distance-badge { font-size: 16px; }
+    .selection-banner { font-size: 12px; padding: 5px 12px; top: 6px; }
+    .qr-info { padding: 9px 14px; font-size: 14px; border-radius: 12px; }
+    .no-qr-info { padding: 10px 14px; font-size: 14px; border-radius: 12px; }
+    .test-banner { font-size: 13px; padding: 8px 10px; }
+    .test-banner .test-icon { font-size: 16px; }
+    .sidebar-header { font-size: 14px; }
+    .bld-table { font-size: 13px; }
+    .bld-name { font-size: 13px; }
+    .bld-depts { font-size: 11px; }
+    .bld-badge { width: 28px; height: 28px; font-size: 14px; }
+    .legend { gap: 10px; }
+    .legend-item { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1><span class="icon">+</span>Навигация по больнице</h1>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-dot green"></span> Я здесь</span>
+      <span class="legend-item"><span class="legend-dot blue"></span> Корпус-цель</span>
+      <span class="legend-item"><span class="legend-dot orange"></span> Корпуса</span>
+    </div>
+  </header>
+
+  <div class="main-content">
+    <div class="map-column">
+      <div class="map-wrapper" id="mapWrapper">
+        <canvas id="map"></canvas>
+        <div class="selection-banner hidden" id="selectionBanner">Кликните по карте, чтобы отметить точку</div>
+      </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">📋 Корпуса больницы</div>
+      <div class="sidebar-table-wrapper">
+        <table class="bld-table">
+          <tbody id="buildingsTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="qr-info hidden" id="qrInfo">
+    <span class="pin-icon">📍</span> Вы у: <strong id="qrInfoName"></strong>
+  </div>
+
+  <div class="no-qr-info hidden" id="noQrInfo">
+    <span class="warn-icon">⚠</span>
+    <span>QR-код не распознан.<br>Пожалуйста, отсканируйте QR-код у входа в больницу.</span>
+  </div>
+
+  <div class="test-banner hidden" id="testBanner">
+    <span class="test-icon">🧪</span>
+    <span class="test-text">Тестовый режим: точка у КПП. Для реального использования отсканируйте QR-код.</span>
+    <button class="test-close" id="testBannerClose">✕</button>
+  </div>
+
+  <div class="controls" id="controls">
+    <button class="btn-select-map hidden" id="btnSelectMap">📍 Выбрать точку на карте</button>
+  </div>
+
+  <div class="route-panel hidden" id="routePanel">
+    <span class="route-info" id="routeInfo"></span>
+    <button class="btn-reset" id="btnReset">✕ Сбросить маршрут</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  var IMG_W = 2016, IMG_H = 864;
+  var METERS_PER_PX = 0.25;
+  var mapImage = null;
+
+  function getScaleFactor() {
+    var rect = canvas.getBoundingClientRect();
+    return { x: IMG_W / rect.width, y: IMG_H / rect.height };
+  }
+
+  function screenPos(px, py) {
+    return { x: px, y: py };
+  }
+
+  function invScreen(sx, sy) {
+    return { gx: sx, gy: sy };
+  }
+
+  var BUILDINGS = [
+    { id: 1, gx: 1220, gy: 370, hw: 30, hd: 30 },
+  ];
+
+  var BUILDING_INFO = [
+    { id: 1, name: 'Главный корпус', departments: '—' },
+  ];
+
+  var CALLOUTS = [
+    { id: 1, gx: 1218, gy: 205, text: 'Главный корпус', buildingId: 1 },
+  ];
+
+  var QR_POINTS = [
+    { id: 'qr_gate', name: 'КПП', gx: 1301, gy: 684 },
+  ];
+
+  var WAYPOINTS = [
+    { id: 'W0', gx: 1314, gy: 689 },
+    { id: 'W1', gx: 1402, gy: 659 },
+    { id: 'W2', gx: 1491, gy: 580 },
+    { id: 'W3', gx: 1401, gy: 482 },
+    { id: 'W4', gx: 1314, gy: 404 },
+  ];
+
+  var ALL_NODES = {};
+  var GRAPH = {};
+
+  function addNode(key, obj) {
+    ALL_NODES[key] = obj;
+    GRAPH[key] = GRAPH[key] || {};
+  }
+
+  function addEdge(a, b) {
+    GRAPH[a] = GRAPH[a] || {};
+    GRAPH[b] = GRAPH[b] || {};
+    var d = distGrid(ALL_NODES[a], ALL_NODES[b]);
+    GRAPH[a][b] = d;
+    GRAPH[b][a] = d;
+  }
+
+  function removeNode(key) {
+    delete ALL_NODES[key];
+    delete GRAPH[key];
+    var nkeys = Object.keys(GRAPH);
+    for (var i = 0; i < nkeys.length; i++) {
+      delete GRAPH[nkeys[i]][key];
+    }
+  }
+
+  function distGrid(a, b) {
+    var dx = a.gx - b.gx;
+    var dy = a.gy - b.gy;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function distGridPoint(gx1, gy1, gx2, gy2) {
+    var dx = gx1 - gx2;
+    var dy = gy1 - gy2;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function initGraph() {
+    ALL_NODES = {};
+    GRAPH = {};
+    BUILDINGS.forEach(function(b)  { addNode('B' + b.id, b); });
+    WAYPOINTS.forEach(function(w)  { addNode(w.id, w); });
+    QR_POINTS.forEach(function(q)  { addNode(q.id, q); });
+
+    var edges = [
+      ['W0','W1'], ['W1','W2'], ['W2','W3'], ['W3','W4'],
+      ['B1','W4'],
+      ['qr_gate','W0'],
+    ];
+    edges.forEach(function(e) { addEdge(e[0], e[1]); });
+  }
+
+  function findPath(startKey, toBldId) {
+    var toKey = 'B' + toBldId;
+    var distMap = {};
+    var prev = {};
+    var allKeys = Object.keys(ALL_NODES);
+    for (var i = 0; i < allKeys.length; i++) {
+      distMap[allKeys[i]] = Infinity;
+    }
+    distMap[startKey] = 0;
+
+    var unvisited = allKeys.slice();
+    while (unvisited.length > 0) {
+      var minIdx = 0;
+      for (var i = 1; i < unvisited.length; i++) {
+        if (distMap[unvisited[i]] < distMap[unvisited[minIdx]]) minIdx = i;
+      }
+      var current = unvisited[minIdx];
+      unvisited.splice(minIdx, 1);
+      if (distMap[current] === Infinity) break;
+      if (current === toKey) break;
+      var neighbors = GRAPH[current];
+      if (!neighbors) continue;
+      var nkeys = Object.keys(neighbors);
+      for (var j = 0; j < nkeys.length; j++) {
+        var nb = nkeys[j];
+        var alt = distMap[current] + neighbors[nb];
+        if (alt < distMap[nb]) {
+          distMap[nb] = alt;
+          prev[nb] = current;
+        }
+      }
+    }
+    if (distMap[toKey] === Infinity) return null;
+    var path = [toKey];
+    var cur = toKey;
+    while (cur !== startKey) {
+      cur = prev[cur];
+      if (!cur) return null;
+      path.unshift(cur);
+    }
+    return { nodes: path, distance: distMap[toKey] };
+  }
+
+  function pathToScreenPoints(path) {
+    return path.nodes.map(function(k) {
+      var n = ALL_NODES[k];
+      return screenPos(n.gx, n.gy);
+    });
+  }
+
+  var canvas = document.getElementById('map');
+  var ctx = canvas.getContext('2d');
+  canvas.width = IMG_W;
+  canvas.height = IMG_H;
+
+  var state = {
+    activeQrId: null,
+    activeQrName: null,
+    startGx: null,
+    startGy: null,
+    startKey: null,
+    toBldId: null,
+    routePath: null,
+    routeDistance: 0,
+    mapSelectMode: false,
+    hoveredBldId: null,
+    hoveredCalloutId: null,
+  };
+
+  var isDebug = false;
+  var isTestMode = false;
+
+  var animState = {
+    active: false,
+    fullPath: null,
+    startTime: 0,
+    duration: 650,
+    targetBldId: null,
+  };
+
+  function loadMapImage() {
+    mapImage = new Image();
+    mapImage.onload = function() { render(); };
+    mapImage.src = 'hospital-map.png';
+  }
+
+  function drawMapImage() {
+    if (mapImage && mapImage.complete && mapImage.naturalWidth > 0) {
+      ctx.drawImage(mapImage, 0, 0);
+    } else {
+      ctx.fillStyle = '#E8F5E9';
+      ctx.fillRect(0, 0, IMG_W, IMG_H);
+    }
+  }
+
+  function getBuildingColor(bld) {
+    return '#D7CCC8';
+  }
+
+  function hasStart() { return state.startKey !== null; }
+
+  function easeOutCubic(t) {
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  function getAnimatedPath(fullPath, t) {
+    if (t <= 0) return [fullPath[0]];
+    if (t >= 1) return fullPath.slice();
+
+    var segLengths = [];
+    var totalLen = 0;
+    for (var i = 0; i < fullPath.length - 1; i++) {
+      var dx = fullPath[i + 1].x - fullPath[i].x;
+      var dy = fullPath[i + 1].y - fullPath[i].y;
+      var len = Math.sqrt(dx * dx + dy * dy);
+      segLengths.push(len);
+      totalLen += len;
+    }
+    if (totalLen === 0) return fullPath.slice();
+
+    var target = t * totalLen;
+    var accum = 0;
+    var result = [fullPath[0]];
+
+    for (var i = 0; i < segLengths.length; i++) {
+      if (accum + segLengths[i] >= target) {
+        var segT = (target - accum) / segLengths[i];
+        result.push({
+          x: fullPath[i].x + (fullPath[i + 1].x - fullPath[i].x) * segT,
+          y: fullPath[i].y + (fullPath[i + 1].y - fullPath[i].y) * segT,
+        });
+        return result;
+      }
+      accum += segLengths[i];
+      result.push(fullPath[i + 1]);
+    }
+    return fullPath.slice();
+  }
+
+  function startRouteAnimation(fullPath, toBldId) {
+    cancelRouteAnimation();
+    animState.active = true;
+    animState.fullPath = fullPath.slice();
+    animState.startTime = performance.now();
+    animState.duration = 650;
+    animState.targetBldId = toBldId;
+    state.routePath = [fullPath[0]];
+  }
+
+  function cancelRouteAnimation() {
+    animState.active = false;
+    animState.fullPath = null;
+  }
+
+  function updateAnimation(now) {
+    if (!animState.active) return false;
+    var elapsed = now - animState.startTime;
+    var rawT = Math.min(elapsed / animState.duration, 1);
+    var t = easeOutCubic(rawT);
+    state.routePath = getAnimatedPath(animState.fullPath, t);
+    if (rawT >= 1) {
+      state.routePath = animState.fullPath.slice();
+      animState.active = false;
+      return false;
+    }
+    return true;
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+  }
+
+  var MARKER_SIZE = 34;
+
+  function drawFlatBuilding(bld) {
+    var pos = screenPos(bld.gx, bld.gy);
+    var x = pos.x - MARKER_SIZE / 2;
+    var y = pos.y - MARKER_SIZE / 2;
+    var r = 8;
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.20)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+    roundRect(ctx, x, y, MARKER_SIZE, MARKER_SIZE, r);
+    ctx.fillStyle = '#D7CCC8';
+    ctx.fill();
+    ctx.strokeStyle = '#8D6E63';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+
+    if (state.toBldId === bld.id) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(21,101,192,0.65)';
+      ctx.lineWidth = 4;
+      roundRect(ctx, x - 4, y - 4, MARKER_SIZE + 8, MARKER_SIZE + 8, r + 4);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (state.hoveredBldId === bld.id && state.toBldId !== bld.id) {
+      roundRect(ctx, x, y, MARKER_SIZE, MARKER_SIZE, r);
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.fill();
+    }
+  }
+
+  function drawBuildingLabel(bld) {
+    var rc = screenPos(bld.gx, bld.gy);
+    ctx.font = 'bold 16px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#5D4037';
+    ctx.fillText(String(bld.id), rc.x, rc.y);
+  }
+
+  function drawDestinationMarker(bld) {
+    var pos = screenPos(bld.gx, bld.gy);
+    var py = pos.y - MARKER_SIZE / 2 - 16;
+    ctx.beginPath();
+    ctx.arc(pos.x, py, 11, 0, Math.PI * 2);
+    ctx.fillStyle = '#1565C0';
+    ctx.fill();
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.font = 'bold 10px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText('Цель', pos.x, py);
+  }
+
+  function drawCallouts() {
+    CALLOUTS.forEach(function(c) {
+      var sc = screenPos(c.gx, c.gy);
+      var isHovered = state.hoveredCalloutId === c.id;
+
+      if (isHovered && hasStart()) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(21,101,192,0.15)';
+        ctx.beginPath();
+        ctx.arc(sc.x, sc.y, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(21,101,192,0.45)';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+    });
+  }
+
+  function drawStartMarker() {
+    if (!hasStart()) return;
+    var sc = screenPos(state.startGx, state.startGy);
+
+    var t = Date.now() / 1000;
+    var pulse = 1 + 0.12 * Math.sin(t * 2.5);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(sc.x, sc.y, 22 * pulse, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(46,125,50,0.18)';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(sc.x, sc.y, 12, 0, Math.PI * 2);
+    ctx.fillStyle = '#2E7D32';
+    ctx.fill();
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillText('📍', sc.x, sc.y + 1);
+
+    ctx.font = '600 13px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = '#2E7D32';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('Я здесь', sc.x, sc.y - 18);
+
+    ctx.restore();
+  }
+
+  function drawQrDots() {
+    QR_POINTS.forEach(function(q) {
+      var isActive = (state.activeQrId === q.id);
+      var sc = screenPos(q.gx, q.gy);
+      var r = isActive ? 14 : 7;
+      ctx.beginPath();
+      ctx.arc(sc.x, sc.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = isActive ? '#2E7D32' : 'rgba(46,125,50,0.55)';
+      ctx.fill();
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = isActive ? 2.5 : 1.5;
+      ctx.stroke();
+
+      if (!isActive) {
+        ctx.font = '10px "Segoe UI", system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = '#2E7D32';
+        ctx.fillText('QR', sc.x, sc.y + r + 4);
+      }
+    });
+  }
+
+  function drawRoutePath() {
+    if (!state.routePath || state.routePath.length < 2) return;
+    var pts = state.routePath;
+    var isAnim = animState.active;
+
+    ctx.save();
+
+    ctx.strokeStyle = 'rgba(66,165,245,0.45)';
+    ctx.lineWidth = 13;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#42A5F5';
+    ctx.lineWidth = 5;
+    ctx.setLineDash([13, 8]);
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    var dotCount = isAnim ? pts.length - 1 : pts.length;
+    for (var i = 0; i < dotCount; i++) {
+      ctx.beginPath();
+      ctx.arc(pts[i].x, pts[i].y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fill();
+      ctx.strokeStyle = '#1565C0';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+    }
+
+    if (isAnim) {
+      var tip = pts[pts.length - 1];
+      var pulse = 0.7 + 0.3 * Math.sin(Date.now() / 140);
+      ctx.beginPath();
+      ctx.arc(tip.x, tip.y, 9 * pulse, 0, Math.PI * 2);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fill();
+      ctx.strokeStyle = '#1565C0';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(tip.x, tip.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#1565C0';
+      ctx.fill();
+    }
+
+    if (!isAnim) {
+      var last  = pts[pts.length - 1];
+      var prev2 = pts[pts.length - 2];
+      var angle = Math.atan2(last.y - prev2.y, last.x - prev2.x);
+      var as = 15;
+      ctx.beginPath();
+      ctx.moveTo(last.x, last.y);
+      ctx.lineTo(last.x - as * Math.cos(angle - 0.45), last.y - as * Math.sin(angle - 0.45));
+      ctx.lineTo(last.x - as * Math.cos(angle + 0.45), last.y - as * Math.sin(angle + 0.45));
+      ctx.closePath();
+      ctx.fillStyle = '#1565C0';
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  function hitTestBuilding(sx, sy) {
+    var hitRadius = 22;
+    for (var i = 0; i < BUILDINGS.length; i++) {
+      var b = BUILDINGS[i];
+      var pos = screenPos(b.gx, b.gy);
+      var dx = sx - pos.x;
+      var dy = sy - pos.y;
+      if (Math.sqrt(dx * dx + dy * dy) < hitRadius) {
+        return b;
+      }
+    }
+    return null;
+  }
+
+  function hitTestCallout(sx, sy) {
+    var hitRadius = 28;
+    for (var i = 0; i < CALLOUTS.length; i++) {
+      var c = CALLOUTS[i];
+      var pos = screenPos(c.gx, c.gy);
+      var dx = sx - pos.x;
+      var dy = sy - pos.y;
+      if (Math.sqrt(dx * dx + dy * dy) < hitRadius) {
+        return c;
+      }
+    }
+    return null;
+  }
+
+  function getCanvasCoords(e) {
+    var rect = canvas.getBoundingClientRect();
+    var scale = getScaleFactor();
+    return { x: (e.clientX - rect.left) * scale.x, y: (e.clientY - rect.top) * scale.y };
+  }
+
+  function handleTableRowClick(bldId) {
+    if (state.toBldId === bldId) {
+      clearRoute();
+      return;
+    }
+    if (hasStart()) {
+      setRoute(bldId);
+    } else {
+      state.toBldId = bldId;
+      updateUI();
+      render();
+    }
+  }
+
+  function updateTableHighlight() {
+    var rows = document.querySelectorAll('.bld-row');
+    for (var i = 0; i < rows.length; i++) {
+      var rowId = parseInt(rows[i].getAttribute('data-bld-id'), 10);
+      rows[i].classList.toggle('highlighted', rowId === state.toBldId);
+    }
+  }
+
+  function initBuildingsTable() {
+    var tbody = document.getElementById('buildingsTableBody');
+    BUILDING_INFO.forEach(function(info) {
+      var tr = document.createElement('tr');
+      tr.className = 'bld-row';
+      tr.setAttribute('data-bld-id', info.id);
+      tr.innerHTML =
+        '<td class="bld-num"><span class="bld-badge">' + info.id + '</span></td>' +
+        '<td class="bld-name">' + info.name + '</td>' +
+        '<td class="bld-depts">' + info.departments + '</td>';
+      tr.addEventListener('click', function() {
+        handleTableRowClick(info.id);
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  function setQrPoint(qrId) {
+    var qr = QR_POINTS.find(function(q) { return q.id === qrId; });
+    if (!qr) return;
+    state.activeQrId = qr.id;
+    state.activeQrName = qr.name;
+    state.startGx = qr.gx;
+    state.startGy = qr.gy;
+    state.startKey = qr.id;
+    clearRoute();
+    updateUI();
+    render();
+  }
+
+  function setMapPin(sx, sy) {
+    var grid = invScreen(sx, sy);
+    var gx = grid.gx;
+    var gy = grid.gy;
+
+    var bestWp = null, bestDist = Infinity;
+    WAYPOINTS.forEach(function(w) {
+      var d = distGridPoint(gx, gy, w.gx, w.gy);
+      if (d < bestDist) { bestDist = d; bestWp = w; }
+    });
+
+    removeNode('mappin');
+    addNode('mappin', { gx: gx, gy: gy });
+    addEdge('mappin', bestWp.id);
+
+    state.activeQrId = null;
+    state.activeQrName = 'выбранная точка';
+    state.startGx = gx;
+    state.startGy = gy;
+    state.startKey = 'mappin';
+    state.mapSelectMode = false;
+    clearRoute();
+    updateUI();
+    render();
+  }
+
+  function setRoute(toBldId) {
+    if (!hasStart()) return;
+    if (state.toBldId === toBldId) { clearRoute(); return; }
+    var result = findPath(state.startKey, toBldId);
+    if (!result) return;
+    state.toBldId = toBldId;
+    state.routeDistance = result.distance;
+    var fullPath = pathToScreenPoints(result);
+    startRouteAnimation(fullPath, toBldId);
+    updateUI();
+  }
+
+  function clearRoute() {
+    cancelRouteAnimation();
+    state.toBldId = null;
+    state.routePath = null;
+    state.routeDistance = 0;
+    updateUI();
+    render();
+  }
+
+  function updateUI() {
+    var routePanel = document.getElementById('routePanel');
+    var routeInfo  = document.getElementById('routeInfo');
+    var btnMap     = document.getElementById('btnSelectMap');
+    var banner     = document.getElementById('selectionBanner');
+    var qrInfo     = document.getElementById('qrInfo');
+    var qrInfoName = document.getElementById('qrInfoName');
+    var noQrInfo   = document.getElementById('noQrInfo');
+    var testBanner = document.getElementById('testBanner');
+
+    if (state.toBldId !== null) {
+      var m = Math.round(state.routeDistance * METERS_PER_PX);
+      var fromName = state.activeQrName || 'точки';
+      routeInfo.innerHTML =
+        'От <strong>' + fromName + '</strong> до <strong>Корпуса ' + state.toBldId +
+        '</strong> <span class="distance-badge">≈ ' + m + ' м</span>';
+      routePanel.classList.remove('hidden');
+    } else {
+      routePanel.classList.add('hidden');
+    }
+
+    if (hasStart()) {
+      qrInfoName.textContent = state.activeQrName;
+      qrInfo.classList.remove('hidden');
+      noQrInfo.classList.add('hidden');
+    } else {
+      qrInfo.classList.add('hidden');
+      if (isDebug) {
+        noQrInfo.classList.add('hidden');
+      } else {
+        noQrInfo.classList.remove('hidden');
+      }
+    }
+
+    testBanner.classList.toggle('hidden', !isTestMode);
+
+    if (state.mapSelectMode) {
+      banner.classList.remove('hidden');
+      canvas.classList.add('pointer');
+      btnMap.classList.add('hidden');
+    } else {
+      banner.classList.add('hidden');
+      canvas.classList.remove('pointer');
+      if (isDebug) {
+        btnMap.classList.toggle('hidden', hasStart());
+      } else {
+        btnMap.classList.add('hidden');
+      }
+    }
+
+    updateTableHighlight();
+  }
+
+  function render(ts) {
+    if (animState.active) {
+      updateAnimation(ts || performance.now());
+    }
+
+    ctx.clearRect(0, 0, IMG_W, IMG_H);
+
+    drawMapImage();
+    drawQrDots();
+
+    var sorted = BUILDINGS.slice().sort(function(a, b) { return (a.gy + a.gx) - (b.gy + b.gx); });
+    sorted.forEach(function(b) { drawFlatBuilding(b); });
+    sorted.forEach(function(b) { drawBuildingLabel(b); });
+
+    drawRoutePath();
+    drawCallouts();
+
+    if (hasStart()) drawStartMarker();
+    if (state.toBldId !== null) {
+      var toBld = BUILDINGS.find(function(b) { return b.id === state.toBldId; });
+      if (toBld) drawDestinationMarker(toBld);
+    }
+
+    if (hasStart() || state.mapSelectMode || animState.active) {
+      requestAnimationFrame(render);
+    }
+  }
+
+  function requestRender() {
+    if (!hasStart() && !state.mapSelectMode && !animState.active) {
+      render();
+    }
+  }
+
+  canvas.addEventListener('click', function(e) {
+    var coords = getCanvasCoords(e);
+    console.log('Click:', Math.round(coords.x), Math.round(coords.y));
+    var bld = hitTestBuilding(coords.x, coords.y);
+    var callout = hitTestCallout(coords.x, coords.y);
+
+    if (state.mapSelectMode && isDebug) {
+      if (!bld && !callout) {
+        setMapPin(coords.x, coords.y);
+      }
+      return;
+    }
+
+    if (callout && hasStart()) {
+      setRoute(callout.buildingId);
+      return;
+    }
+
+    if (bld && hasStart()) {
+      setRoute(bld.id);
+    }
+  });
+
+  canvas.addEventListener('mousemove', function(e) {
+    if (state.mapSelectMode) return;
+    var coords = getCanvasCoords(e);
+    var bld = hitTestBuilding(coords.x, coords.y);
+    var callout = hitTestCallout(coords.x, coords.y);
+    var prevBld = state.hoveredBldId;
+    var prevCallout = state.hoveredCalloutId;
+    state.hoveredBldId = bld ? bld.id : null;
+    state.hoveredCalloutId = callout ? callout.id : null;
+    if (prevBld !== state.hoveredBldId || prevCallout !== state.hoveredCalloutId) {
+      canvas.classList.toggle('pointer', ((state.hoveredBldId !== null || state.hoveredCalloutId !== null) && hasStart()));
+      requestRender();
+    }
+  });
+
+  canvas.addEventListener('mouseleave', function() {
+    if (state.hoveredBldId !== null || state.hoveredCalloutId !== null) {
+      state.hoveredBldId = null;
+      state.hoveredCalloutId = null;
+      canvas.classList.remove('pointer');
+      requestRender();
+    }
+  });
+
+  window.addEventListener('resize', function() {
+    requestRender();
+  });
+
+  document.getElementById('btnSelectMap').addEventListener('click', function() {
+    if (!isDebug) return;
+    state.mapSelectMode = true;
+    updateUI();
+    render();
+  });
+
+  document.getElementById('btnReset').addEventListener('click', function() {
+    clearRoute();
+  });
+
+  document.getElementById('testBannerClose').addEventListener('click', function() {
+    isTestMode = false;
+    var testBanner = document.getElementById('testBanner');
+    testBanner.classList.add('hidden');
+  });
+
+  function initFromURL() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var qrParam = params.get('qr');
+      isDebug = params.get('debug') === 'true';
+
+      if (qrParam) {
+        var valid = ['qr_gate'];
+        if (valid.indexOf(qrParam) !== -1) {
+          isTestMode = false;
+          initGraph();
+          setQrPoint(qrParam);
+          return;
+        }
+        isTestMode = false;
+        initGraph();
+        render();
+        updateUI();
+        return;
+      }
+
+      if (isDebug) {
+        isTestMode = false;
+        initGraph();
+        render();
+        updateUI();
+        return;
+      }
+
+      isTestMode = true;
+      initGraph();
+      setQrPoint('qr_gate');
+      return;
+    } catch (e) {}
+    isTestMode = true;
+    initGraph();
+    setQrPoint('qr_gate');
+  }
+
+  loadMapImage();
+  initFromURL();
+  initBuildingsTable();
+})();
+</script>
+</body>
+</html>
