@@ -21,10 +21,8 @@
             overflow: hidden;
         }
 
-        /* ===== ШАПКА (11% высоты) ===== */
+        /* ===== ШАПКА ===== */
         .header {
-            height: 11vh;
-            min-height: 80px;
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
             padding: 8px 16px;
@@ -70,10 +68,8 @@
         }
         .btn-fullscreen:active { transform: scale(0.96); }
 
-        /* ===== КОНТЕЙНЕР КАРТЫ (66.7% высоты) ===== */
+        /* ===== КОНТЕЙНЕР КАРТЫ ===== */
         .map-area {
-            height: 66.7vh;
-            min-height: 300px;
             position: relative;
             overflow-x: auto;
             overflow-y: hidden;
@@ -96,7 +92,7 @@
             pointer-events: none;
         }
 
-        /* Маркеры — позиционируются внутри map-wrapper */
+        /* Маркеры */
         .marker {
             position: absolute;
             width: 34px;
@@ -152,10 +148,8 @@
             z-index: 5;
         }
 
-        /* ===== НИЖНЯЯ ПАНЕЛЬ (22.2% высоты) ===== */
+        /* ===== НИЖНЯЯ ПАНЕЛЬ ===== */
         .bottom-panel {
-            height: 22.2vh;
-            min-height: 140px;
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
             border-top: 1px solid rgba(0, 0, 0, 0.1);
@@ -307,8 +301,8 @@
     // === ДАННЫЕ ===
     const IMG_W = 2016, IMG_H = 864;
     const SCALE_FACTOR = 2.023;   // 1748 / 864
-    const DISPLAY_W = IMG_W * SCALE_FACTOR;  // 4078px
-    const DISPLAY_H = IMG_H * SCALE_FACTOR;  // 1748px
+    const DISPLAY_W = IMG_W * SCALE_FACTOR;
+    const DISPLAY_H = IMG_H * SCALE_FACTOR;
 
     const METERS_PER_PX = 0.25;
 
@@ -379,12 +373,30 @@
         return { nodes: path, distance: dist[toKey] };
     }
 
-    // Масштабируем координаты под новый размер карты
     function scaleCoord(gx, gy) {
         return { x: gx * SCALE_FACTOR, y: gy * SCALE_FACTOR };
     }
 
-    // Элементы
+    // === ДИНАМИЧЕСКАЯ ВЫСОТА ===
+    function resizeLayout() {
+        const availableHeight = window.innerHeight;
+        const header = document.querySelector('.header');
+        const mapArea = document.querySelector('.map-area');
+        const bottomPanel = document.querySelector('.bottom-panel');
+
+        const headerHeight = availableHeight * 0.11;
+        const panelHeight = availableHeight * 0.222;
+        const mapHeight = availableHeight * 0.667;
+
+        header.style.height = `${headerHeight}px`;
+        mapArea.style.height = `${mapHeight}px`;
+        bottomPanel.style.height = `${panelHeight}px`;
+
+        if (typeof updateMarkers === 'function') updateMarkers();
+        if (typeof drawRoute === 'function') drawRoute();
+    }
+
+    // === ЭЛЕМЕНТЫ ===
     const mapArea = document.getElementById('mapArea');
     const mapWrapper = document.getElementById('mapWrapper');
     const mapImage = document.getElementById('map-image');
@@ -545,7 +557,7 @@
             state.startGx = 1301;
             state.startGy = 684;
         } else {
-            state.startKey = 'qr_gate';  // тест
+            state.startKey = 'qr_gate';
         }
         updateMarkers();
     }
@@ -556,7 +568,7 @@
         mapArea.scrollLeft = Math.max(0, targetScroll);
     }
 
-    // Нижняя панель — открытие/закрытие списка
+    // === УПРАВЛЕНИЕ ПАНЕЛЬЮ ===
     let panelOpen = false;
     function togglePanel() {
         const list = document.querySelector('.buildings-list');
@@ -573,32 +585,37 @@
             panelOpen = false;
         }
     }
-    // по умолчанию список свёрнут
-    document.querySelector('.buildings-list').style.display = 'none';
-    panelHeader.addEventListener('click', togglePanel);
 
-    // Полноэкранный режим (просто открыть картинку в новом окне)
+    // === СОБЫТИЯ ===
     document.getElementById('openFullscreenBtn').addEventListener('click', () => {
         window.open('hospital-map.png', '_blank');
     });
-
     document.getElementById('btnReset').addEventListener('click', clearRoute);
+    panelHeader.addEventListener('click', togglePanel);
+
     mapArea.addEventListener('scroll', () => {
         updateMarkers();
         drawRoute();
     });
     window.addEventListener('resize', () => {
+        resizeLayout();
+        scrollToKPP();
         updateMarkers();
         drawRoute();
     });
 
+    // ИНИЦИАЛИЗАЦИЯ
     initGraph();
     renderBuildingsList();
     setStartFromQR();
+    resizeLayout();      // ← главный фикс для телефона
     scrollToKPP();
     updateMarkers();
     drawRoute();
     updateUI();
+
+    // Скрываем список при старте
+    document.querySelector('.buildings-list').style.display = 'none';
 </script>
 </body>
 </html>
