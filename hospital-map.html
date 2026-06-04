@@ -229,7 +229,7 @@
         .hint-panel {
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            /* border-top удалён, чтобы не было зазора между плашками */
             flex-shrink: 0;
         }
 
@@ -321,8 +321,8 @@
     <div class="buildings-list" id="buildingsList"></div>
 </div>
 
-<!-- ПАНЕЛЬ ПОДСКАЗКИ (всегда внизу, одинаковой высоты с панелью корпусов) -->
-<div class="hint-panel" id="hintPanel">
+<!-- ПАНЕЛЬ ПОДСКАЗКИ (всегда внизу) -->
+<div class="hint-panel">
     <div class="hint-text">
         <span class="emoji">👆</span> Нажми на корпус, чтобы построить маршрут
     </div>
@@ -589,33 +589,32 @@
         }, 50);
     }
 
+    // === БЕЗОПАСНАЯ ВЫСОТА ДЛЯ ТЕЛЕФОНА ===
+    function safeInnerHeight() {
+        return window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    }
+
     function resizeLayout() {
-        const availableHeight = window.innerHeight;
+        const availableHeight = safeInnerHeight();
         const header = document.querySelector('.header');
         const mapAreaEl = document.querySelector('.map-area');
         const buildingsPanel = document.querySelector('.buildings-panel');
         const hintPanel = document.querySelector('.hint-panel');
 
-        // Шапка: 10% от высоты, минимум 70px
         const headerHeight = Math.max(availableHeight * 0.10, 70);
-        
-        // Высота подсказки и свёрнутой панели корпусов — одинаковы (8% от высоты, минимум 55px)
         const collapsedHeight = Math.max(availableHeight * 0.06, 40);
         
-        // Текущая высота панели корпусов (свёрнута или открыта)
         const isOpen = buildingsPanel.classList.contains('open');
         const buildingsHeight = isOpen ? availableHeight * 0.60 : collapsedHeight;
-        
-        // Высота подсказки всегда одинакова со свёрнутой панелью
         const hintHeight = collapsedHeight;
-        
-        // Карта занимает оставшееся место
         const mapHeight = availableHeight - headerHeight - buildingsHeight - hintHeight;
 
-        header.style.height = `${headerHeight}px`;
-        mapAreaEl.style.height = `${mapHeight}px`;
-        buildingsPanel.style.height = `${buildingsHeight}px`;
-        hintPanel.style.height = `${hintHeight}px`;
+        if (headerHeight > 0 && mapHeight > 0 && buildingsHeight > 0 && hintHeight > 0) {
+            header.style.height = `${headerHeight}px`;
+            mapAreaEl.style.height = `${mapHeight}px`;
+            buildingsPanel.style.height = `${buildingsHeight}px`;
+            hintPanel.style.height = `${hintHeight}px`;
+        }
 
         updateImageScale();
         updateMarkers();
@@ -639,6 +638,16 @@
         }, 50);
     });
 
+    // Обработка изменения видимой области на телефоне (адресная строка)
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+            setTimeout(resizeLayout, 50);
+        });
+    }
+    window.addEventListener('resize', () => {
+        setTimeout(resizeLayout, 50);
+    });
+
     // СОБЫТИЯ
     document.getElementById('openFullscreenBtn').addEventListener('click', () => {
         window.open('hospital-map.png', '_blank');
@@ -649,7 +658,6 @@
         updateMarkers();
         drawRoute();
     });
-    window.addEventListener('resize', () => resizeLayout());
 
     // СТАРТ
     initGraph();
