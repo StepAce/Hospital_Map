@@ -74,7 +74,7 @@
             overflow-x: auto;
             overflow-y: hidden;
             background: #1a1a2e;
-            flex-shrink: 0;
+            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .map-wrapper {
@@ -146,13 +146,13 @@
             z-index: 5;
         }
 
-        /* ===== ПАНЕЛЬ КОРПУСОВ (выезжает) ===== */
+        /* ===== ПАНЕЛЬ КОРПУСОВ ===== */
         .buildings-panel {
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
             border-top: 1px solid rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
-            transition: height 0.3s ease;
+            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             overflow: hidden;
         }
 
@@ -178,13 +178,8 @@
         }
 
         .buildings-list {
-            height: 0;
             overflow-y: auto;
-            transition: height 0.3s ease;
-        }
-
-        .buildings-panel.open .buildings-list {
-            height: calc(100% - 46px);
+            transition: opacity 0.2s ease;
         }
 
         .building-item {
@@ -307,7 +302,6 @@
     </div>
 </div>
 
-<!-- ПАНЕЛЬ КОРПУСОВ -->
 <div class="buildings-panel" id="buildingsPanel">
     <div class="panel-header" id="panelHeader">
         <span>📋 Корпуса и отделения</span>
@@ -316,7 +310,6 @@
     <div class="buildings-list" id="buildingsList"></div>
 </div>
 
-<!-- ПАНЕЛЬ ПОДСКАЗКИ -->
 <div class="hint-panel">
     <div class="hint-text">
         <span class="emoji">👆</span> Нажми на корпус, чтобы построить маршрут
@@ -584,8 +577,11 @@
         }, 50);
     }
 
-    // === ДИНАМИЧЕСКАЯ ВЫСОТА С ПОДДЕРЖКОЙ ТЕЛЕФОНОВ ===
-    function resizeLayout() {
+    // === ВЫСОТЫ С ПЛАВНОЙ АНИМАЦИЕЙ ===
+    let isAnimating = false;
+    let animationTimer = null;
+
+    function updateSizesImmediate() {
         const viewport = window.visualViewport;
         const availableHeight = viewport ? viewport.height : window.innerHeight;
         
@@ -594,29 +590,61 @@
         const buildingsPanel = document.querySelector('.buildings-panel');
         const hintPanel = document.querySelector('.hint-panel');
         
-        // Шапка: 10% но не больше 80px и не меньше 55px
         const headerHeight = Math.min(Math.max(availableHeight * 0.10, 55), 80);
-        
-        // Высота плашек в свёрнутом виде: 7% но не больше 55px и не меньше 40px
         const collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
         
         const isOpen = buildingsPanel.classList.contains('open');
         const buildingsHeight = isOpen ? availableHeight * 0.60 : collapsedHeight;
         const hintHeight = collapsedHeight;
         
-        const mapHeight = availableHeight - headerHeight - buildingsHeight - hintHeight;
+        let mapHeight = availableHeight - headerHeight - buildingsHeight - hintHeight;
+        if (mapHeight < 100) mapHeight = 100;
         
-        if (mapHeight > 100) {
-            header.style.height = `${headerHeight}px`;
-            mapAreaEl.style.height = `${mapHeight}px`;
-            buildingsPanel.style.height = `${buildingsHeight}px`;
-            hintPanel.style.height = `${hintHeight}px`;
-        }
+        header.style.height = `${headerHeight}px`;
+        buildingsPanel.style.height = `${buildingsHeight}px`;
+        hintPanel.style.height = `${hintHeight}px`;
+        mapAreaEl.style.height = `${mapHeight}px`;
         
         updateImageScale();
         updateMarkers();
         drawRoute();
-        scrollToKPP();
+    }
+
+    function updateSizesWithAnimation() {
+        if (isAnimating) return;
+        isAnimating = true;
+        
+        const viewport = window.visualViewport;
+        const availableHeight = viewport ? viewport.height : window.innerHeight;
+        
+        const header = document.querySelector('.header');
+        const buildingsPanel = document.querySelector('.buildings-panel');
+        const hintPanel = document.querySelector('.hint-panel');
+        
+        const headerHeight = Math.min(Math.max(availableHeight * 0.10, 55), 80);
+        const collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
+        
+        const isOpen = buildingsPanel.classList.contains('open');
+        const buildingsHeight = isOpen ? availableHeight * 0.60 : collapsedHeight;
+        const hintHeight = collapsedHeight;
+        
+        header.style.height = `${headerHeight}px`;
+        buildingsPanel.style.height = `${buildingsHeight}px`;
+        hintPanel.style.height = `${hintHeight}px`;
+        
+        if (animationTimer) clearTimeout(animationTimer);
+        animationTimer = setTimeout(() => {
+            updateImageScale();
+            updateMarkers();
+            drawRoute();
+            scrollToKPP();
+            isAnimating = false;
+            animationTimer = null;
+        }, 380);
+    }
+
+    function resizeLayout() {
+        updateSizesImmediate();
     }
 
     // Управление панелью корпусов
@@ -625,27 +653,19 @@
     const panelArrow = document.getElementById('panelArrow');
 
     panelHeader.addEventListener('click', () => {
-    // Сначала переключаем класс (начинается анимация)
-    buildingsPanel.classList.toggle('open');
-    panelArrow.classList.toggle('open');
-    
-    // Ждём окончания анимации (300ms), только потом пересчитываем карту
-    setTimeout(() => {
-        resizeLayout();
-        updateImageScale();
-        updateMarkers();
-        drawRoute();
-    }, 300);  // ← было 30, стало 300
-});
+        buildingsPanel.classList.toggle('open');
+        panelArrow.classList.toggle('open');
+        updateSizesWithAnimation();
+    });
 
-    // Обработчики изменения размера
+    // Обработчики
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
-            setTimeout(resizeLayout, 30);
+            setTimeout(() => updateSizesImmediate(), 30);
         });
     }
     window.addEventListener('resize', () => {
-        setTimeout(resizeLayout, 30);
+        setTimeout(() => updateSizesImmediate(), 30);
     });
 
     // СОБЫТИЯ
@@ -663,7 +683,7 @@
     initGraph();
     renderBuildingsList();
     setStartFromQR();
-    resizeLayout();
+    updateSizesImmediate();
 </script>
 </body>
 </html>
