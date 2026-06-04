@@ -34,7 +34,6 @@
             flex-shrink: 0;
             gap: 8px;
             z-index: 20;
-            height: 70px;
         }
 
         .header-left {
@@ -43,13 +42,13 @@
         }
 
         .hospital-name {
-            font-size: 18px;
+            font-size: clamp(16px, 4vw, 20px);
             font-weight: 800;
             color: #dc0c0c;
         }
 
         .subtitle {
-            font-size: 12px;
+            font-size: clamp(11px, 3vw, 13px);
             color: #1565C0;
             font-weight: 500;
             margin-top: 2px;
@@ -59,9 +58,9 @@
             background: #1565C0;
             color: white;
             border: none;
-            padding: 6px 14px;
+            padding: 8px 16px;
             border-radius: 30px;
-            font-size: 13px;
+            font-size: clamp(12px, 3vw, 14px);
             font-weight: 600;
             cursor: pointer;
             white-space: nowrap;
@@ -75,8 +74,7 @@
             overflow-x: auto;
             overflow-y: hidden;
             background: #1a1a2e;
-            flex: 1;
-            min-height: 0;
+            flex-shrink: 0;
         }
 
         .map-wrapper {
@@ -148,18 +146,14 @@
             z-index: 5;
         }
 
-        /* ===== ПАНЕЛЬ КОРПУСОВ ===== */
+        /* ===== ПАНЕЛЬ КОРПУСОВ (выезжает) ===== */
         .buildings-panel {
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
             border-top: 1px solid rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
+            transition: height 0.3s ease;
             overflow: hidden;
-            height: 50px;
-        }
-
-        .buildings-panel.open {
-            height: 60vh;
         }
 
         .panel-header {
@@ -184,13 +178,13 @@
         }
 
         .buildings-list {
+            height: 0;
             overflow-y: auto;
-            height: calc(100% - 50px);
-            display: none;
+            transition: height 0.3s ease;
         }
 
         .buildings-panel.open .buildings-list {
-            display: block;
+            height: calc(100% - 46px);
         }
 
         .building-item {
@@ -232,7 +226,6 @@
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
             flex-shrink: 0;
-            height: 50px;
         }
 
         .hint-text {
@@ -301,7 +294,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Инфек32ционная больница</div>
+        <div class="hospital-name">Инфекционная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <button class="btn-fullscreen" id="openFullscreenBtn">🗺 Открыть карту</button>
@@ -423,8 +416,6 @@
         mapImage.style.height = `${containerHeight}px`;
         mapImage.style.width = `${newWidth}px`;
         mapWrapper.style.width = `${newWidth}px`;
-        updateMarkers();
-        drawRoute();
     }
 
     function scaleCoord(gx, gy) {
@@ -590,12 +581,41 @@
             const kppPos = scaleCoord(1301, 684);
             const targetScroll = kppPos.x - (mapArea.clientWidth / 2);
             mapArea.scrollLeft = Math.max(0, targetScroll);
-        }, 100);
+        }, 50);
     }
 
-    // === ОСНОВНАЯ ФУНКЦИЯ ===
+    // === ДИНАМИЧЕСКАЯ ВЫСОТА С ПОДДЕРЖКОЙ ТЕЛЕФОНОВ ===
     function resizeLayout() {
+        const viewport = window.visualViewport;
+        const availableHeight = viewport ? viewport.height : window.innerHeight;
+        
+        const header = document.querySelector('.header');
+        const mapAreaEl = document.querySelector('.map-area');
+        const buildingsPanel = document.querySelector('.buildings-panel');
+        const hintPanel = document.querySelector('.hint-panel');
+        
+        // Шапка: 10% но не больше 80px и не меньше 55px
+        const headerHeight = Math.min(Math.max(availableHeight * 0.10, 55), 80);
+        
+        // Высота плашек в свёрнутом виде: 7% но не больше 55px и не меньше 40px
+        const collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
+        
+        const isOpen = buildingsPanel.classList.contains('open');
+        const buildingsHeight = isOpen ? availableHeight * 0.60 : collapsedHeight;
+        const hintHeight = collapsedHeight;
+        
+        const mapHeight = availableHeight - headerHeight - buildingsHeight - hintHeight;
+        
+        if (mapHeight > 100) {
+            header.style.height = `${headerHeight}px`;
+            mapAreaEl.style.height = `${mapHeight}px`;
+            buildingsPanel.style.height = `${buildingsHeight}px`;
+            hintPanel.style.height = `${hintHeight}px`;
+        }
+        
         updateImageScale();
+        updateMarkers();
+        drawRoute();
         scrollToKPP();
     }
 
@@ -609,12 +629,20 @@
         panelArrow.classList.toggle('open');
         setTimeout(() => {
             resizeLayout();
-        }, 50);
+            updateImageScale();
+            updateMarkers();
+            drawRoute();
+        }, 30);
     });
 
     // Обработчики изменения размера
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+            setTimeout(resizeLayout, 30);
+        });
+    }
     window.addEventListener('resize', () => {
-        setTimeout(resizeLayout, 100);
+        setTimeout(resizeLayout, 30);
     });
 
     // СОБЫТИЯ
