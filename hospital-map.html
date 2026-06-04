@@ -74,7 +74,7 @@
             overflow-x: auto;
             overflow-y: hidden;
             background: #1a1a2e;
-            flex-shrink: 0;
+            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .map-wrapper {
@@ -146,7 +146,7 @@
             z-index: 5;
         }
 
-        /* ===== ПАНЕЛЬ КОРПУСОВ (выезжает с анимацией) ===== */
+        /* ===== ПАНЕЛЬ КОРПУСОВ ===== */
         .buildings-panel {
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
@@ -154,6 +154,11 @@
             flex-shrink: 0;
             transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             overflow: hidden;
+            height: 50px;
+        }
+
+        .buildings-panel.open {
+            height: 60vh;
         }
 
         .panel-header {
@@ -179,6 +184,7 @@
 
         .buildings-list {
             overflow-y: auto;
+            height: calc(100% - 50px);
         }
 
         .building-item {
@@ -288,7 +294,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">И11нфекционная больница</div>
+        <div class="hospital-name">Инфекционная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <button class="btn-fullscreen" id="openFullscreenBtn">🗺 Открыть карту</button>
@@ -579,7 +585,13 @@
     }
 
     // === ДИНАМИЧЕСКАЯ ВЫСОТА ===
+    let isResizing = false;
+    let resizeTimer = null;
+
     function resizeLayout() {
+        if (isResizing) return;
+        isResizing = true;
+        
         const viewport = window.visualViewport;
         const availableHeight = viewport ? viewport.height : window.innerHeight;
         
@@ -595,22 +607,25 @@
         const buildingsHeight = isOpen ? availableHeight * 0.60 : collapsedHeight;
         const hintHeight = collapsedHeight;
         
-        const mapHeight = availableHeight - headerHeight - buildingsHeight - hintHeight;
+        let mapHeight = availableHeight - headerHeight - buildingsHeight - hintHeight;
+        if (mapHeight < 100) mapHeight = 100;
         
-        if (mapHeight > 100) {
-            header.style.height = `${headerHeight}px`;
-            mapAreaEl.style.height = `${mapHeight}px`;
-            buildingsPanel.style.height = `${buildingsHeight}px`;
-            hintPanel.style.height = `${hintHeight}px`;
-        }
+        header.style.height = `${headerHeight}px`;
+        buildingsPanel.style.height = `${buildingsHeight}px`;
+        hintPanel.style.height = `${hintHeight}px`;
+        mapAreaEl.style.height = `${mapHeight}px`;
         
-        updateImageScale();
-        updateMarkers();
-        drawRoute();
-        scrollToKPP();
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+            updateImageScale();
+            updateMarkers();
+            drawRoute();
+            scrollToKPP();
+            isResizing = false;
+        }, 50);
     }
 
-    // Управление панелью корпусов с плавной анимацией
+    // Управление панелью корпусов
     const buildingsPanel = document.getElementById('buildingsPanel');
     const panelHeader = document.getElementById('panelHeader');
     const panelArrow = document.getElementById('panelArrow');
@@ -618,13 +633,7 @@
     panelHeader.addEventListener('click', () => {
         buildingsPanel.classList.toggle('open');
         panelArrow.classList.toggle('open');
-        // Ждём окончания анимации (350ms), потом обновляем карту
-        setTimeout(() => {
-            updateImageScale();
-            updateMarkers();
-            drawRoute();
-            scrollToKPP();
-        }, 350);
+        resizeLayout();
     });
 
     // Обработчики изменения размера
