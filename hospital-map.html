@@ -34,6 +34,7 @@
             flex-shrink: 0;
             gap: 8px;
             z-index: 20;
+            height: 70px;
         }
 
         .header-left {
@@ -42,13 +43,13 @@
         }
 
         .hospital-name {
-            font-size: clamp(16px, 4vw, 20px);
+            font-size: 18px;
             font-weight: 800;
             color: #dc0c0c;
         }
 
         .subtitle {
-            font-size: clamp(11px, 3vw, 13px);
+            font-size: 12px;
             color: #1565C0;
             font-weight: 500;
             margin-top: 2px;
@@ -58,9 +59,9 @@
             background: #1565C0;
             color: white;
             border: none;
-            padding: 8px 16px;
+            padding: 6px 14px;
             border-radius: 30px;
-            font-size: clamp(12px, 3vw, 14px);
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             white-space: nowrap;
@@ -68,13 +69,14 @@
         }
         .btn-fullscreen:active { transform: scale(0.96); }
 
-        /* ===== КАРТА ===== */
+        /* ===== КАРТА (растягивается) ===== */
         .map-area {
             position: relative;
             overflow-x: auto;
             overflow-y: hidden;
             background: #1a1a2e;
-            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            flex: 1;
+            min-height: 0;
         }
 
         .map-wrapper {
@@ -152,25 +154,30 @@
             backdrop-filter: blur(10px);
             border-top: 1px solid rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
-            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: height 0.3s ease;
             overflow: hidden;
+            height: 50px;
+        }
+
+        .buildings-panel.open {
+            height: 65vh;
         }
 
         .panel-header {
-            padding: 10px 20px;
+            padding: 8px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             cursor: pointer;
             font-weight: 700;
-            font-size: 16px;
+            font-size: 15px;
             color: #1a1a2e;
             border-bottom: 1px solid #ccc;
-            flex-shrink: 0;
+            height: 50px;
         }
 
         .panel-arrow {
-            font-size: 20px;
+            font-size: 18px;
             transition: transform 0.2s;
         }
         .panel-arrow.open {
@@ -178,34 +185,34 @@
         }
 
         .buildings-list {
+            height: calc(100% - 50px);
             overflow-y: auto;
-            opacity: 1;
-            transition: opacity 0.2s ease;
+            display: none;
         }
 
-        .buildings-panel:not(.open) .buildings-list {
-            display: none;
+        .buildings-panel.open .buildings-list {
+            display: block;
         }
 
         .building-item {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 8px 20px;
+            padding: 8px 16px;
             cursor: pointer;
             border-bottom: 1px solid #eee;
         }
         .building-item:active { background: #E3F2FD; }
         .building-num {
-            width: 32px;
-            height: 32px;
+            width: 30px;
+            height: 30px;
             background: #EEEEEE;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 800;
-            font-size: 15px;
+            font-size: 14px;
             color: #37474F;
         }
         .building-info {
@@ -213,7 +220,7 @@
         }
         .building-name {
             font-weight: 600;
-            font-size: 15px;
+            font-size: 14px;
             color: #263238;
         }
         .building-depts {
@@ -226,10 +233,11 @@
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
             flex-shrink: 0;
+            height: 50px;
         }
 
         .hint-text {
-            padding: 10px 20px;
+            padding: 8px 16px;
             font-size: 13px;
             color: #546E7A;
             background: #F8F9FA;
@@ -245,7 +253,7 @@
             right: 20px;
             background: white;
             border-radius: 14px;
-            padding: 10px 16px;
+            padding: 8px 14px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -254,24 +262,24 @@
             box-shadow: 0 2px 12px rgba(0,0,0,0.2);
         }
         .route-info {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 500;
         }
         .distance-badge {
             background: #42A5F5;
             color: white;
-            padding: 3px 10px;
+            padding: 2px 8px;
             border-radius: 20px;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
         }
         .btn-reset {
             background: #EF5350;
             color: white;
             border: none;
-            padding: 6px 14px;
+            padding: 5px 12px;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             cursor: pointer;
         }
@@ -294,7 +302,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Инфекци55онная больница</div>
+        <div class="hospital-name">Инфекционная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <button class="btn-fullscreen" id="openFullscreenBtn">🗺 Открыть карту</button>
@@ -406,7 +414,7 @@
     let routeCanvas = document.getElementById('route-canvas');
     let ctx = routeCanvas.getContext('2d');
 
-    function forceResizeMap() {
+    function updateImageScale() {
         const containerHeight = mapArea.clientHeight;
         if (containerHeight <= 0) return;
         currentScale = containerHeight / IMG_H;
@@ -579,54 +587,17 @@
             const kppPos = scaleCoord(1301, 684);
             const targetScroll = kppPos.x - (mapArea.clientWidth / 2);
             mapArea.scrollLeft = Math.max(0, targetScroll);
-        }, 50);
+        }, 100);
     }
 
-    // === ОСНОВНАЯ ФУНКЦИЯ ПЕРЕСЧЁТА ВЫСОТ И МАСШТАБА ===
-        function resizeLayout() {
-        const viewport = window.visualViewport;
-        const availableHeight = viewport ? viewport.height : window.innerHeight;
-        
-        const header = document.querySelector('.header');
-        const mapAreaEl = document.querySelector('.map-area');
-        const buildingsPanel = document.querySelector('.buildings-panel');
-        const hintPanel = document.querySelector('.hint-panel');
-        
-        const headerHeight = Math.min(Math.max(availableHeight * 0.10, 55), 80);
-        const collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
-        
-        const isOpen = buildingsPanel.classList.contains('open');
-        // Если панель открыта, карта должна быть меньше (высота панели больше)
-        const buildingsHeight = isOpen ? availableHeight * 0.60 : collapsedHeight;
-        const hintHeight = collapsedHeight;
-        
-        let mapHeight = availableHeight - headerHeight - buildingsHeight - hintHeight;
-        if (mapHeight < 100) mapHeight = 100;
-        
-        header.style.height = `${headerHeight}px`;
-        buildingsPanel.style.height = `${buildingsHeight}px`;
-        hintPanel.style.height = `${hintHeight}px`;
-        mapAreaEl.style.height = `${mapHeight}px`;
-        
-        // Принудительный пересчёт карты
-        const newHeight = mapAreaEl.clientHeight;
-        if (newHeight > 0) {
-            currentScale = newHeight / IMG_H;
-            const newWidth = IMG_W * currentScale;
-            mapImage.style.height = `${newHeight}px`;
-            mapImage.style.width = `${newWidth}px`;
-            mapWrapper.style.width = `${newWidth}px`;
-        }
-        
+    function resizeMap() {
+        updateImageScale();
         updateMarkers();
         drawRoute();
-        // Не вызываем scrollToKPP() при каждом resize, только при необходимости
-        if (!buildingsPanel.classList.contains('open')) {
-            scrollToKPP();
-        }
+        scrollToKPP();
     }
 
-    // Управление панелью корпусов
+    // Управление панелью
     const buildingsPanel = document.getElementById('buildingsPanel');
     const panelHeader = document.getElementById('panelHeader');
     const panelArrow = document.getElementById('panelArrow');
@@ -634,20 +605,15 @@
     panelHeader.addEventListener('click', () => {
         buildingsPanel.classList.toggle('open');
         panelArrow.classList.toggle('open');
-        resizeLayout();
+        // Даём время на анимацию, потом пересчитываем карту
+        setTimeout(resizeMap, 350);
     });
 
-    // Обработчики изменения размера экрана
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', () => {
-            setTimeout(resizeLayout, 30);
-        });
-    }
+    // Обработчики
     window.addEventListener('resize', () => {
-        setTimeout(resizeLayout, 30);
+        setTimeout(resizeMap, 100);
     });
 
-    // СОБЫТИЯ
     document.getElementById('openFullscreenBtn').addEventListener('click', () => {
         window.open('hospital-map.png', '_blank');
     });
@@ -662,7 +628,7 @@
     initGraph();
     renderBuildingsList();
     setStartFromQR();
-    resizeLayout();
+    resizeMap();
 </script>
 </body>
 </html>
