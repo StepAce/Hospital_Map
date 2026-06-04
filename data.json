@@ -1,0 +1,38 @@
+{
+  "config": {
+    "mapWidth": 2016,
+    "mapHeight": 864,
+    "metersPerPixel": 0.25,
+    "mapImage": "hospital-map.webp"
+  },
+  "startPoints": [
+    { "id": "qr_gate", "name": "КПП", "x": 1301, "y": 684 }
+  ],
+  "buildings": [
+    {
+      "id": 1,
+      "name": "Главный корпус",
+      "x": 1220,
+      "y": 370,
+      "departments": "Терапия, кардиология",
+      "callout": { "x": 1218, "y": 205 }
+    }
+  ],
+  "waypoints": [
+    { "id": "W0", "x": 1314, "y": 689 },
+    { "id": "W1", "x": 1402, "y": 659 },
+    { "id": "W2", "x": 1491, "y": 580 },
+    { "id": "W3", "x": 1401, "y": 482 },
+    { "id": "W4", "x": 1314, "y": 404 }
+  ],
+  "graph": {
+    "edges": [
+      ["qr_gate", "W0"],
+      ["W0", "W1"],
+      ["W1", "W2"],
+      ["W2", "W3"],
+      ["W3", "W4"],
+      ["W4", "B1"]
+    ]
+  }
+}
