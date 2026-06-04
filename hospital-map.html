@@ -146,13 +146,13 @@
             z-index: 5;
         }
 
-        /* ===== ПАНЕЛЬ КОРПУСОВ (выезжает) ===== */
+        /* ===== ПАНЕЛЬ КОРПУСОВ (выезжает с анимацией) ===== */
         .buildings-panel {
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
             border-top: 1px solid rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
-            transition: height 0.3s ease;
+            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             overflow: hidden;
         }
 
@@ -178,13 +178,7 @@
         }
 
         .buildings-list {
-            height: 0;
             overflow-y: auto;
-            transition: height 0.3s ease;
-        }
-
-        .buildings-panel.open .buildings-list {
-            height: calc(100% - 46px);
         }
 
         .building-item {
@@ -294,7 +288,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Инфекционная больница</div>
+        <div class="hospital-name">И11нфекционная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <button class="btn-fullscreen" id="openFullscreenBtn">🗺 Открыть карту</button>
@@ -584,7 +578,7 @@
         }, 50);
     }
 
-    // === ДИНАМИЧЕСКАЯ ВЫСОТА С ПОДДЕРЖКОЙ ТЕЛЕФОНОВ ===
+    // === ДИНАМИЧЕСКАЯ ВЫСОТА ===
     function resizeLayout() {
         const viewport = window.visualViewport;
         const availableHeight = viewport ? viewport.height : window.innerHeight;
@@ -594,10 +588,7 @@
         const buildingsPanel = document.querySelector('.buildings-panel');
         const hintPanel = document.querySelector('.hint-panel');
         
-        // Шапка: 10% но не больше 80px и не меньше 55px
         const headerHeight = Math.min(Math.max(availableHeight * 0.10, 55), 80);
-        
-        // Высота плашек в свёрнутом виде: 7% но не больше 55px и не меньше 40px
         const collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
         
         const isOpen = buildingsPanel.classList.contains('open');
@@ -619,7 +610,7 @@
         scrollToKPP();
     }
 
-    // Управление панелью корпусов
+    // Управление панелью корпусов с плавной анимацией
     const buildingsPanel = document.getElementById('buildingsPanel');
     const panelHeader = document.getElementById('panelHeader');
     const panelArrow = document.getElementById('panelArrow');
@@ -627,12 +618,13 @@
     panelHeader.addEventListener('click', () => {
         buildingsPanel.classList.toggle('open');
         panelArrow.classList.toggle('open');
+        // Ждём окончания анимации (350ms), потом обновляем карту
         setTimeout(() => {
-            resizeLayout();
             updateImageScale();
             updateMarkers();
             drawRoute();
-        }, 30);
+            scrollToKPP();
+        }, 350);
     });
 
     // Обработчики изменения размера
