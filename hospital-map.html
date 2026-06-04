@@ -34,6 +34,7 @@
             flex-shrink: 0;
             gap: 8px;
             z-index: 20;
+            height: 70px;
         }
 
         .header-left {
@@ -42,13 +43,13 @@
         }
 
         .hospital-name {
-            font-size: clamp(16px, 4vw, 20px);
+            font-size: 18px;
             font-weight: 800;
             color: #dc0c0c;
         }
 
         .subtitle {
-            font-size: clamp(11px, 3vw, 13px);
+            font-size: 12px;
             color: #1565C0;
             font-weight: 500;
             margin-top: 2px;
@@ -58,9 +59,9 @@
             background: #1565C0;
             color: white;
             border: none;
-            padding: 8px 16px;
+            padding: 6px 14px;
             border-radius: 30px;
-            font-size: clamp(12px, 3vw, 14px);
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             white-space: nowrap;
@@ -74,7 +75,8 @@
             overflow-x: auto;
             overflow-y: hidden;
             background: #1a1a2e;
-            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            flex: 1;
+            min-height: 0;
         }
 
         .map-wrapper {
@@ -152,7 +154,6 @@
             backdrop-filter: blur(10px);
             border-top: 1px solid rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
-            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             overflow: hidden;
             height: 50px;
         }
@@ -185,6 +186,11 @@
         .buildings-list {
             overflow-y: auto;
             height: calc(100% - 50px);
+            display: none;
+        }
+
+        .buildings-panel.open .buildings-list {
+            display: block;
         }
 
         .building-item {
@@ -226,6 +232,7 @@
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
             flex-shrink: 0;
+            height: 50px;
         }
 
         .hint-text {
@@ -294,7 +301,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Инфекционная больница</div>
+        <div class="hospital-name">Инфек32ционная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <button class="btn-fullscreen" id="openFullscreenBtn">🗺 Открыть карту</button>
@@ -416,6 +423,8 @@
         mapImage.style.height = `${containerHeight}px`;
         mapImage.style.width = `${newWidth}px`;
         mapWrapper.style.width = `${newWidth}px`;
+        updateMarkers();
+        drawRoute();
     }
 
     function scaleCoord(gx, gy) {
@@ -581,48 +590,13 @@
             const kppPos = scaleCoord(1301, 684);
             const targetScroll = kppPos.x - (mapArea.clientWidth / 2);
             mapArea.scrollLeft = Math.max(0, targetScroll);
-        }, 50);
+        }, 100);
     }
 
-    // === ДИНАМИЧЕСКАЯ ВЫСОТА ===
-    let isResizing = false;
-    let resizeTimer = null;
-
+    // === ОСНОВНАЯ ФУНКЦИЯ ===
     function resizeLayout() {
-        if (isResizing) return;
-        isResizing = true;
-        
-        const viewport = window.visualViewport;
-        const availableHeight = viewport ? viewport.height : window.innerHeight;
-        
-        const header = document.querySelector('.header');
-        const mapAreaEl = document.querySelector('.map-area');
-        const buildingsPanel = document.querySelector('.buildings-panel');
-        const hintPanel = document.querySelector('.hint-panel');
-        
-        const headerHeight = Math.min(Math.max(availableHeight * 0.10, 55), 80);
-        const collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
-        
-        const isOpen = buildingsPanel.classList.contains('open');
-        const buildingsHeight = isOpen ? availableHeight * 0.60 : collapsedHeight;
-        const hintHeight = collapsedHeight;
-        
-        let mapHeight = availableHeight - headerHeight - buildingsHeight - hintHeight;
-        if (mapHeight < 100) mapHeight = 100;
-        
-        header.style.height = `${headerHeight}px`;
-        buildingsPanel.style.height = `${buildingsHeight}px`;
-        hintPanel.style.height = `${hintHeight}px`;
-        mapAreaEl.style.height = `${mapHeight}px`;
-        
-        if (resizeTimer) clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(() => {
-            updateImageScale();
-            updateMarkers();
-            drawRoute();
-            scrollToKPP();
-            isResizing = false;
-        }, 50);
+        updateImageScale();
+        scrollToKPP();
     }
 
     // Управление панелью корпусов
@@ -633,17 +607,14 @@
     panelHeader.addEventListener('click', () => {
         buildingsPanel.classList.toggle('open');
         panelArrow.classList.toggle('open');
-        resizeLayout();
+        setTimeout(() => {
+            resizeLayout();
+        }, 50);
     });
 
     // Обработчики изменения размера
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', () => {
-            setTimeout(resizeLayout, 30);
-        });
-    }
     window.addEventListener('resize', () => {
-        setTimeout(resizeLayout, 30);
+        setTimeout(resizeLayout, 100);
     });
 
     // СОБЫТИЯ
