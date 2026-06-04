@@ -75,6 +75,8 @@
             overflow-y: hidden;
             background: #1a1a2e;
             flex-shrink: 0;
+            /* ПЛАВНАЯ АНИМАЦИЯ ВЫСОТЫ */
+            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .map-wrapper {
@@ -152,8 +154,9 @@
             backdrop-filter: blur(10px);
             border-top: 1px solid rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
-            transition: height 0.3s ease;
             overflow: hidden;
+            /* ПЛАВНАЯ АНИМАЦИЯ ВЫСОТЫ */
+            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .panel-header {
@@ -180,7 +183,7 @@
         .buildings-list {
             height: 0;
             overflow-y: auto;
-            transition: height 0.3s ease;
+            /* УБРАЛИ transition, чтобы список менялся мгновенно внутри анимируемой панели */
         }
 
         .buildings-panel.open .buildings-list {
@@ -294,7 +297,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Инфекционная больница</div>
+        <div class="hospital-name">Инфек33ционная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <button class="btn-fullscreen" id="openFullscreenBtn">🗺 Открыть карту</button>
@@ -585,7 +588,7 @@
     }
 
     // === ДИНАМИЧЕСКАЯ ВЫСОТА С ПОДДЕРЖКОЙ ТЕЛЕФОНОВ ===
-    function resizeLayout() {
+    function resizeLayout(isAnimating = false) {
         const viewport = window.visualViewport;
         const availableHeight = viewport ? viewport.height : window.innerHeight;
         
@@ -611,12 +614,15 @@
             mapAreaEl.style.height = `${mapHeight}px`;
             buildingsPanel.style.height = `${buildingsHeight}px`;
             hintPanel.style.height = `${hintHeight}px`;
+            
+            // Пересчитываем карту ТОЛЬКО если не идет анимация
+            if (!isAnimating) {
+                updateImageScale();
+                updateMarkers();
+                drawRoute();
+                scrollToKPP();
+            }
         }
-        
-        updateImageScale();
-        updateMarkers();
-        drawRoute();
-        scrollToKPP();
     }
 
     // Управление панелью корпусов
@@ -627,12 +633,17 @@
     panelHeader.addEventListener('click', () => {
         buildingsPanel.classList.toggle('open');
         panelArrow.classList.toggle('open');
-        setTimeout(() => {
-            resizeLayout();
+        // Запускаем анимацию (isAnimating = true)
+        resizeLayout(true);
+    });
+
+    // После завершения анимации пересчитываем карту
+    buildingsPanel.addEventListener('transitionend', (e) => {
+        if (e.propertyName === 'height' && e.target === buildingsPanel) {
             updateImageScale();
             updateMarkers();
             drawRoute();
-        }, 30);
+        }
     });
 
     // Обработчики изменения размера
