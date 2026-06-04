@@ -581,7 +581,7 @@
     let isAnimating = false;
     let animationTimer = null;
 
-    function updateSizesImmediate() {
+        function updateSizesImmediate() {
         const viewport = window.visualViewport;
         const availableHeight = viewport ? viewport.height : window.innerHeight;
         
@@ -591,7 +591,8 @@
         const hintPanel = document.querySelector('.hint-panel');
         
         const headerHeight = Math.min(Math.max(availableHeight * 0.10, 55), 80);
-        const collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
+        let collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
+        if (collapsedHeight < 40) collapsedHeight = 40;
         
         const isOpen = buildingsPanel.classList.contains('open');
         const buildingsHeight = isOpen ? availableHeight * 0.60 : collapsedHeight;
@@ -608,6 +609,7 @@
         updateImageScale();
         updateMarkers();
         drawRoute();
+        scrollToKPP();
     }
 
     function updateSizesWithAnimation() {
@@ -622,7 +624,8 @@
         const hintPanel = document.querySelector('.hint-panel');
         
         const headerHeight = Math.min(Math.max(availableHeight * 0.10, 55), 80);
-        const collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
+        let collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
+        if (collapsedHeight < 40) collapsedHeight = 40;
         
         const isOpen = buildingsPanel.classList.contains('open');
         const buildingsHeight = isOpen ? availableHeight * 0.60 : collapsedHeight;
@@ -634,13 +637,26 @@
         
         if (animationTimer) clearTimeout(animationTimer);
         animationTimer = setTimeout(() => {
+            // Принудительное обновление
+            const mapAreaEl = document.querySelector('.map-area');
+            if (mapAreaEl) {
+                const newHeight = mapAreaEl.clientHeight;
+                if (newHeight > 0) {
+                    const newScale = newHeight / IMG_H;
+                    const newWidth = IMG_W * newScale;
+                    mapImage.style.height = `${newHeight}px`;
+                    mapImage.style.width = `${newWidth}px`;
+                    mapWrapper.style.width = `${newWidth}px`;
+                    currentScale = newScale;
+                }
+            }
             updateImageScale();
             updateMarkers();
             drawRoute();
             scrollToKPP();
             isAnimating = false;
             animationTimer = null;
-        }, 380);
+        }, 450);
     }
 
     function resizeLayout() {
