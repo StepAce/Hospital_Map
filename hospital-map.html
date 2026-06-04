@@ -2,20 +2,19 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes">
+    <meta name="theme-color" content="#1565C0">
     <title>Инфекционная больница — навигация</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background: #1a1a2e;
             font-family: 'Segoe UI', system-ui, sans-serif;
             height: 100vh;
+            height: 100dvh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -27,126 +26,164 @@
             backdrop-filter: blur(10px);
             padding: 8px 16px;
             display: flex;
-            flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
             border-bottom: 1px solid rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
             gap: 8px;
-            z-index: 20;
+            z-index: 1000;
+            min-height: 48px;
         }
-
         .header-left {
             flex: 1;
-            min-width: 160px;
+            min-width: 0;
         }
-
         .hospital-name {
             font-size: clamp(16px, 4vw, 20px);
             font-weight: 800;
             color: #dc0c0c;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
-
         .subtitle {
             font-size: clamp(11px, 3vw, 13px);
             color: #1565C0;
             font-weight: 500;
-            margin-top: 2px;
         }
-
-        .btn-fullscreen {
-            background: #1565C0;
+        .btn-reset-route {
+            background: #EF5350;
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 30px;
+            padding: 8px 14px;
+            border-radius: 20px;
             font-size: clamp(12px, 3vw, 14px);
             font-weight: 600;
             cursor: pointer;
             white-space: nowrap;
             flex-shrink: 0;
+            display: none;
+            min-height: 40px;
+            min-width: 48px;
         }
-        .btn-fullscreen:active { transform: scale(0.96); }
+        .btn-reset-route.show { display: inline-block; }
+        .btn-reset-route:active { transform: scale(0.96); }
 
         /* ===== КАРТА ===== */
-        .map-area {
+        .map-container {
+            flex: 1;
             position: relative;
-            overflow-x: auto; 
-            overflow-y: hidden;
+            overflow: hidden;
+            min-height: 0;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
             background: #1a1a2e;
-            flex-shrink: 0;
-            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-            /* Центрирование на случай субпиксельных погрешностей */
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
-        .map-wrapper {
-            position: relative;
-            display: inline-block;
+        /* Leaflet overrides */
+        .leaflet-control-zoom {
+            display: none;
+        }
+        .leaflet-container {
+            background: #1a1a2e;
         }
 
-        #map-image {
-            display: block;
-            pointer-events: none;
-        }
-
-        /* Маркеры */
-        .marker {
-            position: absolute;
-            width: 34px;
-            height: 34px;
+        /* Кастомные маркеры */
+        .building-marker {
+            width: 36px;
+            height: 36px;
             border-radius: 8px;
-            transform: translate(-50%, -50%);
-            pointer-events: auto;
-            cursor: pointer;
-            z-index: 10;
+            background: #D7CCC8;
+            border: 2px solid #8D6E63;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
             font-size: 16px;
             color: #5D4037;
-            background: #D7CCC8;
-            border: 2px solid #8D6E63;
-            box-shadow: 2px 2px 6px rgba(0,0,0,0.2);
+            box-shadow: 2px 2px 6px rgba(0,0,0,0.25);
+            cursor: pointer;
         }
-        .marker.target {
-            box-shadow: 0 0 0 4px rgba(21,101,192,0.55);
+        .building-marker.selected {
+            box-shadow: 0 0 0 5px rgba(21,101,192,0.55);
             border-color: #1565C0;
         }
-        .marker-start {
-            width: 30px;
-            height: 30px;
+        .callout-marker {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: rgba(21,101,192,0.5);
+            border: 1.5px solid rgba(21,101,192,0.75);
+            cursor: pointer;
+        }
+        .start-marker {
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             background: #2E7D32;
             border: 3px solid white;
-            font-size: 17px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 0 0 rgba(46,125,50,0.7);
             animation: pulse 1.5s infinite;
         }
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(46,125,50,0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(46,125,50,0); }
+            70% { box-shadow: 0 0 0 16px rgba(46,125,50,0); }
             100% { box-shadow: 0 0 0 0 rgba(46,125,50,0); }
         }
-        .marker-callout {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: rgba(21,101,192,0.45);
-            border: 1.5px solid rgba(21,101,192,0.7);
-        }
 
-        #route-canvas {
+        /* ===== ПАНЕЛЬ МАРШРУТА (плавающая) ===== */
+        .route-panel {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 5;
+            bottom: 12px;
+            left: 12px;
+            right: 12px;
+            background: white;
+            border-radius: 14px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            z-index: 1000;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.25);
+            display: none;
+            min-height: 48px;
         }
+        .route-panel.show { display: flex; }
+        .route-info {
+            font-size: 15px;
+            font-weight: 500;
+            color: #263238;
+        }
+        .distance-badge {
+            background: #42A5F5;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            margin-left: 6px;
+        }
+        .btn-close-route {
+            background: #EF5350;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            min-height: 40px;
+            min-width: 48px;
+        }
+        .btn-close-route:active { transform: scale(0.96); }
 
         /* ===== ПАНЕЛЬ КОРПУСОВ ===== */
         .buildings-panel {
@@ -156,7 +193,10 @@
             flex-shrink: 0;
             overflow: hidden;
             transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
         }
+        .buildings-panel:not(.open) { height: 46px; }
+        .buildings-panel.open { height: min(55vh, 420px); }
 
         .panel-header {
             padding: 10px 20px;
@@ -169,124 +209,80 @@
             color: #1a1a2e;
             border-bottom: 1px solid #ccc;
             flex-shrink: 0;
+            min-height: 46px;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
-
         .panel-arrow {
             font-size: 20px;
-            transition: transform 0.2s;
+            transition: transform 0.35s;
         }
-        .panel-arrow.open {
-            transform: rotate(180deg);
-        }
+        .buildings-panel.open .panel-arrow { transform: rotate(180deg); }
 
         .buildings-list {
-            height: 0;
-            overflow-y: auto;
-        }
-
-        .buildings-panel.open .buildings-list {
             height: calc(100% - 46px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
-
         .building-item {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding: 8px 20px;
+            gap: 14px;
+            padding: 12px 20px;
             cursor: pointer;
             border-bottom: 1px solid #eee;
+            min-height: 52px;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
         .building-item:active { background: #E3F2FD; }
+        .building-item.selected { background: #E3F2FD; }
         .building-num {
-            width: 32px;
-            height: 32px;
+            width: 34px;
+            height: 34px;
             background: #EEEEEE;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 800;
-            font-size: 15px;
+            font-size: 16px;
             color: #37474F;
+            flex-shrink: 0;
         }
-        .building-info {
-            flex: 1;
-        }
+        .building-info { flex: 1; min-width: 0; }
         .building-name {
             font-weight: 600;
-            font-size: 15px;
+            font-size: 16px;
             color: #263238;
         }
         .building-depts {
-            font-size: 11px;
+            font-size: 12px;
             color: #90A4AE;
         }
 
         /* ===== ПАНЕЛЬ ПОДСКАЗКИ ===== */
         .hint-panel {
-            background: rgba(255, 255, 255, 0.96);
-            backdrop-filter: blur(10px);
+            background: #F8F9FA;
             flex-shrink: 0;
+            z-index: 1000;
         }
-
         .hint-text {
-            padding: 10px 20px;
+            padding: 8px 20px;
             font-size: 13px;
             color: #546E7A;
-            background: #F8F9FA;
             display: flex;
             align-items: center;
-            height: 100%;
+            gap: 6px;
+            min-height: 38px;
         }
-
-        .route-panel {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
-            background: white;
-            border-radius: 14px;
-            padding: 10px 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            z-index: 30;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-        }
-        .route-info {
-            font-size: 13px;
-            font-weight: 500;
-        }
-        .distance-badge {
-            background: #42A5F5;
-            color: white;
-            padding: 3px 10px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 700;
-        }
-        .btn-reset {
-            background: #EF5350;
-            color: white;
-            border: none;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .hidden { display: none !important; }
-        
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(5px); }
-        }
-
         .hint-text .emoji {
             display: inline-block;
             animation: bounce 1.3s ease-in-out infinite;
-            margin-right: 6px;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(5px); }
         }
     </style>
 </head>
@@ -297,17 +293,17 @@
         <div class="hospital-name">Инфекционная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
-    <button class="btn-fullscreen" id="openFullscreenBtn">🗺 Открыть карту</button>
+    <button class="btn-reset-route" id="btnResetRoute">✕ Сбросить</button>
 </div>
 
-<div class="map-area" id="mapArea">
-    <div class="map-wrapper" id="mapWrapper">
-        <img id="map-image" src="hospital-map.png" alt="Карта">
-        <canvas id="route-canvas"></canvas>
+<div class="map-container" id="mapContainer">
+    <div id="map"></div>
+    <div class="route-panel" id="routePanel">
+        <span class="route-info" id="routeInfo"></span>
+        <button class="btn-close-route" id="btnCloseRoute">✕</button>
     </div>
 </div>
 
-<!-- ПАНЕЛЬ КОРПУСОВ -->
 <div class="buildings-panel" id="buildingsPanel">
     <div class="panel-header" id="panelHeader">
         <span>📋 Корпуса и отделения</span>
@@ -316,391 +312,347 @@
     <div class="buildings-list" id="buildingsList"></div>
 </div>
 
-<!-- ПАНЕЛЬ ПОДСКАЗКИ -->
 <div class="hint-panel">
     <div class="hint-text">
-        <span class="emoji">👆</span> Нажми на корпус, чтобы построить маршрут
+        <span class="emoji">👆</span> Нажмите на корпус, чтобы построить маршрут
     </div>
 </div>
 
-<div class="route-panel hidden" id="routePanel">
-    <span class="route-info" id="routeInfo"></span>
-    <button class="btn-reset" id="btnReset">✕ Сбросить</button>
-</div>
-
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // === ДАННЫЕ ===
-    const IMG_W = 2016, IMG_H = 864;
-    const METERS_PER_PX = 0.25;
+(function() {
+    'use strict';
 
-    const BUILDINGS = [
-        { id: 1, name: 'Главный корпус', gx: 1220, gy: 370, departments: 'Терапия, кардиология' }
-    ];
-    const CALLOUTS = [
-        { id: 1, gx: 1218, gy: 205, buildingId: 1 }
-    ];
-    const QR_POINTS = [
-        { id: 'qr_gate', name: 'КПП', gx: 1301, gy: 684 }
-    ];
-    const WAYPOINTS = [
-        { id: 'W0', gx: 1314, gy: 689 },
-        { id: 'W1', gx: 1402, gy: 659 },
-        { id: 'W2', gx: 1491, gy: 580 },
-        { id: 'W3', gx: 1401, gy: 482 },
-        { id: 'W4', gx: 1314, gy: 404 }
-    ];
+    // === СОСТОЯНИЕ ===
+    let appData = null;
+    let map = null;
+    let allNodes = {};
+    let graph = {};
+    let startKey = 'qr_gate';
+    let selectedBuildingId = null;
+    let currentRouteLine = null;
+    let buildingMarkers = {};
+    let startMarker = null;
+    let calloutMarkers = [];
+    let metersPerPixel = 0.25;
 
-    let ALL_NODES = {}, GRAPH = {};
-
-    function addNode(key, obj) {
-        ALL_NODES[key] = obj;
-        GRAPH[key] = GRAPH[key] || {};
-    }
-    function addEdge(a, b) {
-        const dx = ALL_NODES[a].gx - ALL_NODES[b].gx;
-        const dy = ALL_NODES[a].gy - ALL_NODES[b].gy;
-        const d = Math.hypot(dx, dy);
-        GRAPH[a][b] = d;
-        GRAPH[b][a] = d;
-    }
-    function initGraph() {
-        ALL_NODES = {}; GRAPH = {};
-        BUILDINGS.forEach(b => addNode('B' + b.id, b));
-        WAYPOINTS.forEach(w => addNode(w.id, w));
-        QR_POINTS.forEach(q => addNode(q.id, q));
-        [
-            ['W0','W1'], ['W1','W2'], ['W2','W3'], ['W3','W4'],
-            ['B1','W4'], ['qr_gate','W0']
-        ].forEach(e => addEdge(e[0], e[1]));
+    // === ЗАГРУЗКА ДАННЫХ ===
+    async function loadData() {
+        const resp = await fetch('data.json');
+        if (!resp.ok) throw new Error('Не удалось загрузить data.json');
+        appData = await resp.json();
+        metersPerPixel = appData.config.metersPerPixel;
     }
 
-    function findPath(startKey, toBldId) {
-        const toKey = 'B' + toBldId;
-        const dist = {}, prev = {};
-        Object.keys(ALL_NODES).forEach(k => dist[k] = Infinity);
-        dist[startKey] = 0;
-        let unvisited = Object.keys(ALL_NODES);
+    // === ПОСТРОЕНИЕ ГРАФА ===
+    function buildGraph() {
+        allNodes = {};
+        graph = {};
+
+        appData.buildings.forEach(function(b) {
+            var key = 'B' + b.id;
+            allNodes[key] = { x: b.x, y: b.y, name: b.name, isBuilding: true, buildingId: b.id };
+            graph[key] = {};
+        });
+        appData.waypoints.forEach(function(w) {
+            allNodes[w.id] = { x: w.x, y: w.y, isWaypoint: true };
+            graph[w.id] = {};
+        });
+        appData.startPoints.forEach(function(s) {
+            allNodes[s.id] = { x: s.x, y: s.y, name: s.name, isStart: true };
+            graph[s.id] = {};
+        });
+
+        appData.graph.edges.forEach(function(e) {
+            var a = e[0], b = e[1];
+            if (!allNodes[a] || !allNodes[b]) return;
+            var dx = allNodes[a].x - allNodes[b].x;
+            var dy = allNodes[a].y - allNodes[b].y;
+            var dist = Math.hypot(dx, dy);
+            graph[a][b] = dist;
+            graph[b][a] = dist;
+        });
+    }
+
+    // === АЛГОРИТМ ДЕЙКСТРЫ ===
+    function findPath(fromKey, toKey) {
+        if (!allNodes[fromKey] || !allNodes[toKey]) return null;
+        var dist = {}, prev = {};
+        Object.keys(allNodes).forEach(function(k) { dist[k] = Infinity; });
+        dist[fromKey] = 0;
+        var unvisited = Object.keys(allNodes).slice();
         while (unvisited.length) {
-            let minIdx = 0;
-            for (let i = 1; i < unvisited.length; i++)
+            var minIdx = 0;
+            for (var i = 1; i < unvisited.length; i++) {
                 if (dist[unvisited[i]] < dist[unvisited[minIdx]]) minIdx = i;
-            const current = unvisited[minIdx];
+            }
+            var current = unvisited[minIdx];
             unvisited.splice(minIdx, 1);
             if (dist[current] === Infinity || current === toKey) break;
-            const neighbors = GRAPH[current];
-            if (neighbors) Object.keys(neighbors).forEach(nb => {
-                const alt = dist[current] + neighbors[nb];
-                if (alt < dist[nb]) { dist[nb] = alt; prev[nb] = current; }
-            });
+            var neighbors = graph[current];
+            if (neighbors) {
+                Object.keys(neighbors).forEach(function(nb) {
+                    var alt = dist[current] + neighbors[nb];
+                    if (alt < dist[nb]) { dist[nb] = alt; prev[nb] = current; }
+                });
+            }
         }
         if (dist[toKey] === Infinity) return null;
-        const path = [toKey];
-        let cur = toKey;
-        while (cur !== startKey) { cur = prev[cur]; path.unshift(cur); }
+        var path = [toKey];
+        var cur = toKey;
+        while (cur !== fromKey) { cur = prev[cur]; path.unshift(cur); }
         return { nodes: path, distance: dist[toKey] };
     }
 
-    // === РАБОТА С КАРТОЙ ===
-    let currentScale = 1;
-    let mapImage = document.getElementById('map-image');
-    let mapWrapper = document.getElementById('mapWrapper');
-    let mapArea = document.getElementById('mapArea');
-    let routeCanvas = document.getElementById('route-canvas');
-    let ctx = routeCanvas.getContext('2d');
-    let buildingsPanel = document.getElementById('buildingsPanel');
-
-    // !!! ГИБРИДНАЯ ЛОГИКА МАСШТАБИРОВАНИЯ !!!
-    function updateImageScale() {
-        const containerWidth = mapArea.clientWidth;
-        const containerHeight = mapArea.clientHeight;
-        if (containerWidth <= 0 || containerHeight <= 0) return;
-
-        const isOpen = buildingsPanel.classList.contains('open');
-        let finalScale, finalWidth, finalHeight;
-
-        if (isOpen) {
-            // Панель ОТКРЫТА: масштабируем по ШИРИНЕ, чтобы не было горизонтального скролла
-            finalScale = containerWidth / IMG_W;
-            finalWidth = containerWidth;
-            finalHeight = IMG_H * finalScale;
-        } else {
-            // Панель ЗАКРЫТА: масштабируем по ВЫСОТЕ, чтобы карта была большой
-            finalScale = containerHeight / IMG_H;
-            finalHeight = containerHeight;
-            finalWidth = IMG_W * finalScale;
-        }
-
-        currentScale = finalScale;
-        mapImage.style.width = `${finalWidth}px`;
-        mapImage.style.height = `${finalHeight}px`;
-        mapWrapper.style.width = `${finalWidth}px`;
-        mapWrapper.style.height = `${finalHeight}px`;
-    }
-
-    function scaleCoord(gx, gy) {
-        return { x: gx * currentScale, y: gy * currentScale };
-    }
-
-    let markers = { buildings: {}, callouts: {}, start: null };
-    let state = {
-        startKey: 'qr_gate', startGx: 1301, startGy: 684,
-        toBldId: null, routeDistance: 0, currentRouteNodes: null
-    };
-
-    function updateMarkers() {
-        const scrollLeft = mapArea.scrollLeft;
-        BUILDINGS.forEach(b => {
-            const pos = scaleCoord(b.gx, b.gy);
-            const screenX = pos.x - scrollLeft;
-            const screenY = pos.y;
-            let m = markers.buildings[b.id];
-            if (!m) {
-                m = document.createElement('div');
-                m.className = 'marker';
-                m.innerHTML = b.id;
-                m.addEventListener('click', () => setRoute(b.id));
-                mapWrapper.appendChild(m);
-                markers.buildings[b.id] = m;
-            }
-            m.style.left = screenX + 'px';
-            m.style.top = screenY + 'px';
-            if (state.toBldId === b.id) m.classList.add('target');
-            else m.classList.remove('target');
+    // === ИНИЦИАЛИЗАЦИЯ КАРТЫ LEAFLET ===
+    function initMap() {
+        var cfg = appData.config;
+        map = L.map('map', {
+            crs: L.CRS.Simple,
+            minZoom: -2,
+            maxZoom: 2,
+            zoomControl: false,
+            attributionControl: false,
+            dragging: true,
+            tap: true
         });
-        CALLOUTS.forEach(c => {
-            const pos = scaleCoord(c.gx, c.gy);
-            const screenX = pos.x - scrollLeft;
-            const screenY = pos.y;
-            let m = markers.callouts[c.id];
-            if (!m) {
-                m = document.createElement('div');
-                m.className = 'marker marker-callout';
-                m.addEventListener('click', () => setRoute(c.buildingId));
-                mapWrapper.appendChild(m);
-                markers.callouts[c.id] = m;
-            }
-            m.style.left = screenX + 'px';
-            m.style.top = screenY + 'px';
+
+        var bounds = [[0, 0], [cfg.mapHeight, cfg.mapWidth]];
+        L.imageOverlay(cfg.mapImage, bounds).addTo(map);
+        map.fitBounds(bounds);
+    }
+
+    // === СОЗДАНИЕ ИКОНОК МАРКЕРОВ ===
+    function createBuildingIcon(buildingId, selected) {
+        var cls = 'building-marker';
+        if (selected) cls += ' selected';
+        return L.divIcon({
+            className: '',
+            html: '<div class="' + cls + '">' + buildingId + '</div>',
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
         });
-        if (state.startGx !== null) {
-            const pos = scaleCoord(state.startGx, state.startGy);
-            const screenX = pos.x - scrollLeft;
-            const screenY = pos.y;
-            if (!markers.start) {
-                markers.start = document.createElement('div');
-                markers.start.className = 'marker marker-start';
-                markers.start.innerHTML = '📍';
-                mapWrapper.appendChild(markers.start);
-            }
-            markers.start.style.left = screenX + 'px';
-            markers.start.style.top = screenY + 'px';
-        }
     }
 
-    function drawRoute() {
-        routeCanvas.width = mapWrapper.clientWidth;
-        routeCanvas.height = mapWrapper.clientHeight;
-        ctx.clearRect(0, 0, routeCanvas.width, routeCanvas.height);
-        if (!state.currentRouteNodes || !state.startKey) return;
-        const scrollLeft = mapArea.scrollLeft;
-        const points = [];
-        for (let nodeId of state.currentRouteNodes) {
-            const n = ALL_NODES[nodeId];
-            if (n) {
-                const pos = scaleCoord(n.gx, n.gy);
-                points.push({ x: pos.x - scrollLeft, y: pos.y });
-            }
-        }
-        if (points.length < 2) return;
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        for (let i=1; i<points.length; i++) ctx.lineTo(points[i].x, points[i].y);
-        ctx.strokeStyle = '#42A5F5';
-        ctx.lineWidth = 5;
-        ctx.setLineDash([13,8]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        const last = points[points.length-1];
-        const prev = points[points.length-2];
-        if (last && prev) {
-            const angle = Math.atan2(last.y - prev.y, last.x - prev.x);
-            const as = 12;
-            ctx.beginPath();
-            ctx.moveTo(last.x, last.y);
-            ctx.lineTo(last.x - as*Math.cos(angle-0.45), last.y - as*Math.sin(angle-0.45));
-            ctx.lineTo(last.x - as*Math.cos(angle+0.45), last.y - as*Math.sin(angle+0.45));
-            ctx.fillStyle = '#1565C0';
-            ctx.fill();
-        }
+    function createCalloutIcon() {
+        return L.divIcon({
+            className: '',
+            html: '<div class="callout-marker"></div>',
+            iconSize: [14, 14],
+            iconAnchor: [7, 7]
+        });
     }
 
-    function setRoute(bldId) {
-        if (!state.startKey) return;
-        if (state.toBldId === bldId) { clearRoute(); return; }
-        const res = findPath(state.startKey, bldId);
-        if (!res) return;
-        state.toBldId = bldId;
-        state.routeDistance = res.distance;
-        state.currentRouteNodes = res.nodes;
-        updateUI();
-        drawRoute();
-        updateMarkers();
+    function createStartIcon() {
+        return L.divIcon({
+            className: '',
+            html: '<div class="start-marker">📍</div>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+        });
+    }
+
+    // === ОТРИСОВКА МАРКЕРОВ ===
+    function renderMarkers() {
+        appData.buildings.forEach(function(b) {
+            var latlng = [b.y, b.x];
+            var icon = createBuildingIcon(b.id, selectedBuildingId === b.id);
+            var marker = L.marker(latlng, { icon: icon, interactive: true }).addTo(map);
+            marker.on('click', function() { setRoute(b.id); });
+            buildingMarkers[b.id] = marker;
+
+            if (b.callout) {
+                var clatlng = [b.callout.y, b.callout.x];
+                var cmarker = L.marker(clatlng, { icon: createCalloutIcon(), interactive: true }).addTo(map);
+                cmarker.on('click', function() { setRoute(b.id); });
+                calloutMarkers.push(cmarker);
+            }
+        });
+
+        appData.startPoints.forEach(function(sp) {
+            if (sp.id === startKey) {
+                var latlng = [sp.y, sp.x];
+                startMarker = L.marker(latlng, { icon: createStartIcon(), interactive: false }).addTo(map);
+            }
+        });
+    }
+
+    // === ПОСТРОЕНИЕ МАРШРУТА ===
+    function setRoute(buildingId) {
+        if (selectedBuildingId === buildingId) { clearRoute(); return; }
+
+        var toKey = 'B' + buildingId;
+        var result = findPath(startKey, toKey);
+        if (!result) return;
+
+        // Удаляем старый маршрут
+        clearRoutePolyline();
+
+        // Строим новый
+        var latlngs = result.nodes.map(function(nodeId) {
+            var n = allNodes[nodeId];
+            return [n.y, n.x];
+        });
+
+        currentRouteLine = L.polyline(latlngs, {
+            color: '#42A5F5',
+            weight: 5,
+            dashArray: '10, 8',
+            lineJoin: 'round',
+            lineCap: 'round'
+        }).addTo(map);
+
+        selectedBuildingId = buildingId;
+        updateBuildingMarkerIcons();
+        updateRoutePanel(buildingId, result.distance);
+        updateBuildingsListSelection();
+
+        // Анимация к маршруту
+        map.flyToBounds(currentRouteLine.getBounds().pad(0.4), { duration: 0.6 });
+    }
+
+    function clearRoutePolyline() {
+        if (currentRouteLine) {
+            map.removeLayer(currentRouteLine);
+            currentRouteLine = null;
+        }
     }
 
     function clearRoute() {
-        state.toBldId = null;
-        state.routeDistance = 0;
-        state.currentRouteNodes = null;
-        updateUI();
-        drawRoute();
-        updateMarkers();
+        clearRoutePolyline();
+        selectedBuildingId = null;
+        updateBuildingMarkerIcons();
+        updateRoutePanel(null, 0);
+        updateBuildingsListSelection();
+        var bounds = [[0, 0], [appData.config.mapHeight, appData.config.mapWidth]];
+        map.flyToBounds(bounds, { duration: 0.5 });
     }
 
-    function updateUI() {
-        const panel = document.getElementById('routePanel');
-        const info = document.getElementById('routeInfo');
-        if (state.toBldId) {
-            const meters = Math.round(state.routeDistance * METERS_PER_PX);
-            info.innerHTML = `🚶 до Корпуса ${state.toBldId} <span class="distance-badge">≈ ${meters} м</span>`;
-            panel.classList.remove('hidden');
-        } else panel.classList.add('hidden');
-    }
-
-    function renderBuildingsList() {
-        const buildingsList = document.getElementById('buildingsList');
-        buildingsList.innerHTML = '';
-        BUILDINGS.forEach(b => {
-            const div = document.createElement('div');
-            div.className = 'building-item';
-            div.innerHTML = `
-                <div class="building-num">${b.id}</div>
-                <div class="building-info">
-                    <div class="building-name">${b.name}</div>
-                    <div class="building-depts">${b.departments}</div>
-                </div>
-            `;
-            div.addEventListener('click', () => setRoute(b.id));
-            buildingsList.appendChild(div);
+    function updateBuildingMarkerIcons() {
+        Object.keys(buildingMarkers).forEach(function(bid) {
+            var bId = parseInt(bid);
+            var marker = buildingMarkers[bid];
+            marker.setIcon(createBuildingIcon(bId, selectedBuildingId === bId));
         });
     }
 
-    function setStartFromQR() {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('qr') === 'qr_gate') {
-            state.startKey = 'qr_gate';
-            state.startGx = 1301;
-            state.startGy = 684;
-        }
-        updateMarkers();
-    }
+    // === ПАНЕЛЬ ИНФОРМАЦИИ О МАРШРУТЕ ===
+    function updateRoutePanel(buildingId, distance) {
+        var panel = document.getElementById('routePanel');
+        var info = document.getElementById('routeInfo');
+        var resetBtn = document.getElementById('btnResetRoute');
 
-    function scrollToKPP() {
-        if (!mapArea || !mapImage) return;
-        setTimeout(() => {
-            const kppPos = scaleCoord(1301, 684);
-            const targetScroll = kppPos.x - (mapArea.clientWidth / 2);
-            mapArea.scrollLeft = Math.max(0, targetScroll);
-        }, 50);
-    }
-
-    // === УМНАЯ ДИНАМИЧЕСКАЯ ВЫСОТА (БЕЗ ЗАЗОРОВ) ===
-    function resizeLayout(isAnimating = false) {
-        const viewport = window.visualViewport;
-        const availableHeight = viewport ? viewport.height : window.innerHeight;
-        const availableWidth = viewport ? viewport.width : window.innerWidth;
-        
-        const header = document.querySelector('.header');
-        const mapAreaEl = document.querySelector('.map-area');
-        const hintPanel = document.querySelector('.hint-panel');
-        
-        const headerHeight = Math.min(Math.max(availableHeight * 0.10, 55), 80);
-        const hintHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
-        const collapsedPanelHeight = hintHeight;
-        
-        const isOpen = buildingsPanel.classList.contains('open');
-        let mapHeight, buildingsHeight;
-        
-        if (isOpen) {
-            // 1. Вычисляем высоту карты при масштабировании ПО ШИРИНЕ
-            const scale = availableWidth / IMG_W;
-            const calculatedMapHeight = IMG_H * scale;
-            
-            // 2. Панель забирает ВСЁ оставшееся пространство до низа экрана
-            let remainingHeight = availableHeight - headerHeight - calculatedMapHeight - hintHeight;
-            
-            // 3. Защита: если панель получается слишком маленькой (на очень широких экранах), 
-            // даем ей минимум, а карту чуть сжимаем
-            if (remainingHeight < 120) {
-                buildingsHeight = 120;
-                mapHeight = availableHeight - headerHeight - buildingsHeight - hintHeight;
-            } else {
-                mapHeight = calculatedMapHeight;
-                buildingsHeight = remainingHeight;
-            }
+        if (buildingId) {
+            var meters = Math.round(distance * metersPerPixel);
+            var building = appData.buildings.find(function(b) { return b.id === buildingId; });
+            var name = building ? building.name : ('Корпус ' + buildingId);
+            info.innerHTML = '🚶 ' + name + ' <span class="distance-badge">≈ ' + meters + ' м</span>';
+            panel.classList.add('show');
+            resetBtn.classList.add('show');
         } else {
-            // Когда закрыто: карта масштабируется по высоте, панель свернута
-            mapHeight = availableHeight - headerHeight - collapsedPanelHeight - hintHeight;
-            buildingsHeight = collapsedPanelHeight;
+            panel.classList.remove('show');
+            resetBtn.classList.remove('show');
         }
-        
-        if (mapHeight > 100) {
-            header.style.height = `${headerHeight}px`;
-            mapAreaEl.style.height = `${mapHeight}px`;
-            buildingsPanel.style.height = `${buildingsHeight}px`;
-            hintPanel.style.height = `${hintHeight}px`;
-            
-            if (!isAnimating) {
-                updateImageScale();
-                updateMarkers();
-                drawRoute();
-                if (!isOpen) scrollToKPP();
+    }
+
+    // === ПАНЕЛЬ СПИСКА КОРПУСОВ ===
+    function renderBuildingsList() {
+        var list = document.getElementById('buildingsList');
+        list.innerHTML = '';
+        appData.buildings.forEach(function(b) {
+            var div = document.createElement('div');
+            div.className = 'building-item';
+            div.setAttribute('data-building-id', b.id);
+            div.innerHTML =
+                '<div class="building-num">' + b.id + '</div>' +
+                '<div class="building-info">' +
+                    '<div class="building-name">' + escHtml(b.name) + '</div>' +
+                    '<div class="building-depts">' + escHtml(b.departments) + '</div>' +
+                '</div>';
+            div.addEventListener('click', function() { setRoute(b.id); });
+            list.appendChild(div);
+        });
+    }
+
+    function updateBuildingsListSelection() {
+        var items = document.querySelectorAll('.building-item');
+        items.forEach(function(item) {
+            var bid = parseInt(item.getAttribute('data-building-id'));
+            if (bid === selectedBuildingId) item.classList.add('selected');
+            else item.classList.remove('selected');
+        });
+    }
+
+    function escHtml(str) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+    }
+
+    // === ПАНЕЛЬ КОРПУСОВ: СВОРАЧИВАНИЕ/РАЗВОРАЧИВАНИЕ ===
+    function setupPanelToggle() {
+        var panel = document.getElementById('buildingsPanel');
+        var header = document.getElementById('panelHeader');
+        header.addEventListener('click', function() {
+            panel.classList.toggle('open');
+        });
+        panel.addEventListener('transitionend', function(e) {
+            if (e.propertyName === 'height' && e.target === panel) {
+                if (map) map.invalidateSize();
+            }
+        });
+    }
+
+    // === ОБРАБОТКА QR-ПАРАМЕТРА ===
+    function handleQRParam() {
+        var params = new URLSearchParams(window.location.search);
+        var qrVal = params.get('qr');
+        if (qrVal) {
+            var sp = appData.startPoints.find(function(p) { return p.id === qrVal; });
+            if (sp) {
+                startKey = sp.id;
             }
         }
     }
 
-    // Управление панелью корпусов
-    const panelHeader = document.getElementById('panelHeader');
-    const panelArrow = document.getElementById('panelArrow');
-
-    panelHeader.addEventListener('click', () => {
-        buildingsPanel.classList.toggle('open');
-        panelArrow.classList.toggle('open');
-        resizeLayout(true); // Запускаем анимацию
-    });
-
-    // После завершения анимации пересчитываем карту
-    buildingsPanel.addEventListener('transitionend', (e) => {
-        if (e.propertyName === 'height' && e.target === buildingsPanel) {
-            updateImageScale();
-            updateMarkers();
-            drawRoute();
+    // === АДАПТАЦИЯ ПРИ ИЗМЕНЕНИИ РАЗМЕРА ОКНА ===
+    function setupResizeHandler() {
+        function onResize() {
+            if (map) map.invalidateSize();
         }
-    });
-
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', () => {
-            setTimeout(resizeLayout, 30);
-        });
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', function() { setTimeout(onResize, 50); });
+        }
+        window.addEventListener('resize', function() { setTimeout(onResize, 50); });
     }
-    window.addEventListener('resize', () => {
-        setTimeout(resizeLayout, 30);
+
+    // === ЗАПУСК ===
+    async function main() {
+        await loadData();
+        buildGraph();
+        initMap();
+        handleQRParam();
+        renderMarkers();
+        renderBuildingsList();
+        setupPanelToggle();
+        setupResizeHandler();
+
+        document.getElementById('btnResetRoute').addEventListener('click', clearRoute);
+        document.getElementById('btnCloseRoute').addEventListener('click', clearRoute);
+    }
+
+    main().catch(function(err) {
+        document.getElementById('map').innerHTML =
+            '<div style="color:#fff;padding:40px;text-align:center;font-size:16px;">' +
+            'Ошибка загрузки: ' + escHtml(err.message) + '</div>';
     });
 
-    document.getElementById('openFullscreenBtn').addEventListener('click', () => {
-        window.open('hospital-map.png', '_blank');
-    });
-    document.getElementById('btnReset').addEventListener('click', clearRoute);
-
-    mapArea.addEventListener('scroll', () => {
-        updateMarkers();
-        drawRoute();
-    });
-
-    // СТАРТ
-    initGraph();
-    renderBuildingsList();
-    setStartFromQR();
-    resizeLayout();
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+            .then(function(reg) { console.log('SW registered:', reg.scope); })
+            .catch(function(err) { console.warn('SW registration failed:', err); });
+    }
+})();
 </script>
 </body>
 </html>
