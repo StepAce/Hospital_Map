@@ -294,7 +294,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Инфекци22онная больница</div>
+        <div class="hospital-name">Инфекци55онная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <button class="btn-fullscreen" id="openFullscreenBtn">🗺 Открыть карту</button>
@@ -583,7 +583,7 @@
     }
 
     // === ОСНОВНАЯ ФУНКЦИЯ ПЕРЕСЧЁТА ВЫСОТ И МАСШТАБА ===
-    function resizeLayout() {
+        function resizeLayout() {
         const viewport = window.visualViewport;
         const availableHeight = viewport ? viewport.height : window.innerHeight;
         
@@ -596,6 +596,7 @@
         const collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
         
         const isOpen = buildingsPanel.classList.contains('open');
+        // Если панель открыта, карта должна быть меньше (высота панели больше)
         const buildingsHeight = isOpen ? availableHeight * 0.60 : collapsedHeight;
         const hintHeight = collapsedHeight;
         
@@ -607,7 +608,7 @@
         hintPanel.style.height = `${hintHeight}px`;
         mapAreaEl.style.height = `${mapHeight}px`;
         
-        // ПРИНУДИТЕЛЬНЫЙ ПЕРЕСЧЁТ КАРТЫ (синхронно)
+        // Принудительный пересчёт карты
         const newHeight = mapAreaEl.clientHeight;
         if (newHeight > 0) {
             currentScale = newHeight / IMG_H;
@@ -619,7 +620,10 @@
         
         updateMarkers();
         drawRoute();
-        scrollToKPP();
+        // Не вызываем scrollToKPP() при каждом resize, только при необходимости
+        if (!buildingsPanel.classList.contains('open')) {
+            scrollToKPP();
+        }
     }
 
     // Управление панелью корпусов
