@@ -21,7 +21,7 @@
             overflow: hidden;
         }
 
-        /* ===== ШАПКА ===== */
+        /* ===== ШАПКА (фиксированная высота) ===== */
         .header {
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
@@ -34,6 +34,7 @@
             flex-shrink: 0;
             gap: 8px;
             z-index: 20;
+            height: 70px;
         }
 
         .header-left {
@@ -42,13 +43,13 @@
         }
 
         .hospital-name {
-            font-size: clamp(16px, 4vw, 20px);
+            font-size: 18px;
             font-weight: 800;
             color: #dc0c0c;
         }
 
         .subtitle {
-            font-size: clamp(11px, 3vw, 13px);
+            font-size: 12px;
             color: #1565C0;
             font-weight: 500;
             margin-top: 2px;
@@ -58,9 +59,9 @@
             background: #1565C0;
             color: white;
             border: none;
-            padding: 8px 16px;
+            padding: 6px 14px;
             border-radius: 30px;
-            font-size: clamp(12px, 3vw, 14px);
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             white-space: nowrap;
@@ -68,7 +69,7 @@
         }
         .btn-fullscreen:active { transform: scale(0.96); }
 
-        /* ===== КАРТА ===== */
+        /* ===== КАРТА (растягивается) ===== */
         .map-area {
             position: relative;
             overflow-x: auto;
@@ -147,7 +148,7 @@
             z-index: 5;
         }
 
-        /* ===== ПАНЕЛЬ КОРПУСОВ (выезжает) ===== */
+        /* ===== ПАНЕЛЬ КОРПУСОВ ===== */
         .buildings-panel {
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
@@ -155,26 +156,28 @@
             flex-shrink: 0;
             transition: height 0.3s ease;
             overflow: hidden;
+            height: 40px;
+        }
+
+        .buildings-panel.open {
+            height: 60vh;
         }
 
         .panel-header {
-            padding: 10px 20px;
+            padding: 8px 16px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             cursor: pointer;
             font-weight: 700;
-            font-size: 16px;
+            font-size: 15px;
             color: #1a1a2e;
             border-bottom: 1px solid #ccc;
-            flex-shrink: 0;
-            height: 100%;
-            display: flex;
-            align-items: center;
+            height: 40px;
         }
 
         .panel-arrow {
-            font-size: 20px;
+            font-size: 18px;
             transition: transform 0.2s;
         }
         .panel-arrow.open {
@@ -188,28 +191,28 @@
         }
 
         .buildings-panel.open .buildings-list {
-            height: calc(100% - 50px);
+            height: calc(60vh - 40px);
         }
 
         .building-item {
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 8px 20px;
+            padding: 8px 16px;
             cursor: pointer;
             border-bottom: 1px solid #eee;
         }
         .building-item:active { background: #E3F2FD; }
         .building-num {
-            width: 32px;
-            height: 32px;
+            width: 30px;
+            height: 30px;
             background: #EEEEEE;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 800;
-            font-size: 15px;
+            font-size: 14px;
             color: #37474F;
         }
         .building-info {
@@ -217,7 +220,7 @@
         }
         .building-name {
             font-weight: 600;
-            font-size: 15px;
+            font-size: 14px;
             color: #263238;
         }
         .building-depts {
@@ -229,12 +232,12 @@
         .hint-panel {
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
-            /* border-top удалён, чтобы не было зазора между плашками */
             flex-shrink: 0;
+            height: 40px;
         }
 
         .hint-text {
-            padding: 10px 20px;
+            padding: 8px 16px;
             font-size: 13px;
             color: #546E7A;
             background: #F8F9FA;
@@ -250,7 +253,7 @@
             right: 20px;
             background: white;
             border-radius: 14px;
-            padding: 10px 16px;
+            padding: 8px 14px;
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -259,24 +262,24 @@
             box-shadow: 0 2px 12px rgba(0,0,0,0.2);
         }
         .route-info {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 500;
         }
         .distance-badge {
             background: #42A5F5;
             color: white;
-            padding: 3px 10px;
+            padding: 2px 8px;
             border-radius: 20px;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
         }
         .btn-reset {
             background: #EF5350;
             color: white;
             border: none;
-            padding: 6px 14px;
+            padding: 5px 12px;
             border-radius: 20px;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 600;
             cursor: pointer;
         }
@@ -312,7 +315,7 @@
     </div>
 </div>
 
-<!-- ПАНЕЛЬ КОРПУСОВ (выезжает) -->
+<!-- ПАНЕЛЬ КОРПУСОВ -->
 <div class="buildings-panel" id="buildingsPanel">
     <div class="panel-header" id="panelHeader">
         <span>📋 Корпуса и отделения</span>
@@ -321,7 +324,7 @@
     <div class="buildings-list" id="buildingsList"></div>
 </div>
 
-<!-- ПАНЕЛЬ ПОДСКАЗКИ (всегда внизу) -->
+<!-- ПАНЕЛЬ ПОДСКАЗКИ -->
 <div class="hint-panel">
     <div class="hint-text">
         <span class="emoji">👆</span> Нажми на корпус, чтобы построить маршрут
@@ -586,40 +589,7 @@
             const kppPos = scaleCoord(1301, 684);
             const targetScroll = kppPos.x - (mapArea.clientWidth / 2);
             mapArea.scrollLeft = Math.max(0, targetScroll);
-        }, 50);
-    }
-
-    // === БЕЗОПАСНАЯ ВЫСОТА ДЛЯ ТЕЛЕФОНА ===
-    function safeInnerHeight() {
-        return window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    }
-
-    function resizeLayout() {
-        const availableHeight = safeInnerHeight();
-        const header = document.querySelector('.header');
-        const mapAreaEl = document.querySelector('.map-area');
-        const buildingsPanel = document.querySelector('.buildings-panel');
-        const hintPanel = document.querySelector('.hint-panel');
-
-        const headerHeight = Math.max(availableHeight * 0.10, 70);
-        const collapsedHeight = Math.max(availableHeight * 0.06, 40);
-        
-        const isOpen = buildingsPanel.classList.contains('open');
-        const buildingsHeight = isOpen ? availableHeight * 0.60 : collapsedHeight;
-        const hintHeight = collapsedHeight;
-        const mapHeight = availableHeight - headerHeight - buildingsHeight - hintHeight;
-
-        if (headerHeight > 0 && mapHeight > 0 && buildingsHeight > 0 && hintHeight > 0) {
-            header.style.height = `${headerHeight}px`;
-            mapAreaEl.style.height = `${mapHeight}px`;
-            buildingsPanel.style.height = `${buildingsHeight}px`;
-            hintPanel.style.height = `${hintHeight}px`;
-        }
-
-        updateImageScale();
-        updateMarkers();
-        drawRoute();
-        scrollToKPP();
+        }, 100);
     }
 
     // Управление панелью корпусов
@@ -630,22 +600,11 @@
     panelHeader.addEventListener('click', () => {
         buildingsPanel.classList.toggle('open');
         panelArrow.classList.toggle('open');
-        resizeLayout();
         setTimeout(() => {
             updateImageScale();
             updateMarkers();
             drawRoute();
         }, 50);
-    });
-
-    // Обработка изменения видимой области на телефоне (адресная строка)
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('resize', () => {
-            setTimeout(resizeLayout, 50);
-        });
-    }
-    window.addEventListener('resize', () => {
-        setTimeout(resizeLayout, 50);
     });
 
     // СОБЫТИЯ
@@ -658,12 +617,24 @@
         updateMarkers();
         drawRoute();
     });
+    window.addEventListener('resize', () => {
+        setTimeout(() => {
+            updateImageScale();
+            updateMarkers();
+            drawRoute();
+        }, 100);
+    });
 
     // СТАРТ
     initGraph();
     renderBuildingsList();
     setStartFromQR();
-    resizeLayout();
+    setTimeout(() => {
+        updateImageScale();
+        updateMarkers();
+        drawRoute();
+        scrollToKPP();
+    }, 100);
 </script>
 </body>
 </html>
