@@ -71,11 +71,15 @@
         /* ===== КАРТА ===== */
         .map-area {
             position: relative;
-            overflow-x: auto; /* Скролл разрешен, если в закрытом состоянии карта чуть шире экрана */
+            overflow-x: auto; 
             overflow-y: hidden;
             background: #1a1a2e;
             flex-shrink: 0;
             transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            /* Центрирование на случай субпиксельных погрешностей */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .map-wrapper {
@@ -415,12 +419,12 @@
         let finalScale, finalWidth, finalHeight;
 
         if (isOpen) {
-            // Панель ОТКРЫТА: масштабируем строго по ШИРИНЕ, чтобы не было горизонтального скролла
+            // Панель ОТКРЫТА: масштабируем по ШИРИНЕ, чтобы не было горизонтального скролла
             finalScale = containerWidth / IMG_W;
             finalWidth = containerWidth;
             finalHeight = IMG_H * finalScale;
         } else {
-            // Панель ЗАКРЫТА: масштабируем по ВЫСОТЕ (как было изначально), чтобы карта была большой
+            // Панель ЗАКРЫТА: масштабируем по ВЫСОТЕ, чтобы карта была большой
             finalScale = containerHeight / IMG_H;
             finalHeight = containerHeight;
             finalWidth = IMG_W * finalScale;
@@ -599,23 +603,45 @@
         }, 50);
     }
 
-    // === ДИНАМИЧЕСКАЯ ВЫСОТА ===
+    // === УМНАЯ ДИНАМИЧЕСКАЯ ВЫСОТА (БЕЗ ЗАЗОРОВ) ===
     function resizeLayout(isAnimating = false) {
         const viewport = window.visualViewport;
         const availableHeight = viewport ? viewport.height : window.innerHeight;
+        const availableWidth = viewport ? viewport.width : window.innerWidth;
         
         const header = document.querySelector('.header');
         const mapAreaEl = document.querySelector('.map-area');
         const hintPanel = document.querySelector('.hint-panel');
         
         const headerHeight = Math.min(Math.max(availableHeight * 0.10, 55), 80);
-        const collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
+        const hintHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
+        const collapsedPanelHeight = hintHeight;
         
         const isOpen = buildingsPanel.classList.contains('open');
-        const buildingsHeight = isOpen ? availableHeight * 0.60 : collapsedHeight;
-        const hintHeight = collapsedHeight;
+        let mapHeight, buildingsHeight;
         
-        const mapHeight = availableHeight - headerHeight - buildingsHeight - hintHeight;
+        if (isOpen) {
+            // 1. Вычисляем высоту карты при масштабировании ПО ШИРИНЕ
+            const scale = availableWidth / IMG_W;
+            const calculatedMapHeight = IMG_H * scale;
+            
+            // 2. Панель забирает ВСЁ оставшееся пространство до низа экрана
+            let remainingHeight = availableHeight - headerHeight - calculatedMapHeight - hintHeight;
+            
+            // 3. Защита: если панель получается слишком маленькой (на очень широких экранах), 
+            // даем ей минимум, а карту чуть сжимаем
+            if (remainingHeight < 120) {
+                buildingsHeight = 120;
+                mapHeight = availableHeight - headerHeight - buildingsHeight - hintHeight;
+            } else {
+                mapHeight = calculatedMapHeight;
+                buildingsHeight = remainingHeight;
+            }
+        } else {
+            // Когда закрыто: карта масштабируется по высоте, панель свернута
+            mapHeight = availableHeight - headerHeight - collapsedPanelHeight - hintHeight;
+            buildingsHeight = collapsedPanelHeight;
+        }
         
         if (mapHeight > 100) {
             header.style.height = `${headerHeight}px`;
@@ -627,7 +653,7 @@
                 updateImageScale();
                 updateMarkers();
                 drawRoute();
-                scrollToKPP();
+                if (!isOpen) scrollToKPP();
             }
         }
     }
@@ -639,7 +665,7 @@
     panelHeader.addEventListener('click', () => {
         buildingsPanel.classList.toggle('open');
         panelArrow.classList.toggle('open');
-        resizeLayout(true);
+        resizeLayout(true); // Запускаем анимацию
     });
 
     // После завершения анимации пересчитываем карту
