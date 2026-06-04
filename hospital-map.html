@@ -625,15 +625,18 @@
     const panelArrow = document.getElementById('panelArrow');
 
     panelHeader.addEventListener('click', () => {
-        buildingsPanel.classList.toggle('open');
-        panelArrow.classList.toggle('open');
-        setTimeout(() => {
-            resizeLayout();
-            updateImageScale();
-            updateMarkers();
-            drawRoute();
-        }, 30);
-    });
+    // Сначала переключаем класс (начинается анимация)
+    buildingsPanel.classList.toggle('open');
+    panelArrow.classList.toggle('open');
+    
+    // Ждём окончания анимации (300ms), только потом пересчитываем карту
+    setTimeout(() => {
+        resizeLayout();
+        updateImageScale();
+        updateMarkers();
+        drawRoute();
+    }, 300);  // ← было 30, стало 300
+});
 
     // Обработчики изменения размера
     if (window.visualViewport) {
