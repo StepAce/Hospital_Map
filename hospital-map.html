@@ -179,7 +179,12 @@
 
         .buildings-list {
             overflow-y: auto;
+            opacity: 1;
             transition: opacity 0.2s ease;
+        }
+
+        .buildings-panel:not(.open) .buildings-list {
+            display: none;
         }
 
         .building-item {
@@ -289,7 +294,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Инфекционная больница</div>
+        <div class="hospital-name">Инфекци22онная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <button class="btn-fullscreen" id="openFullscreenBtn">🗺 Открыть карту</button>
@@ -401,7 +406,7 @@
     let routeCanvas = document.getElementById('route-canvas');
     let ctx = routeCanvas.getContext('2d');
 
-    function updateImageScale() {
+    function forceResizeMap() {
         const containerHeight = mapArea.clientHeight;
         if (containerHeight <= 0) return;
         currentScale = containerHeight / IMG_H;
@@ -577,11 +582,8 @@
         }, 50);
     }
 
-    // === ВЫСОТЫ С ПЛАВНОЙ АНИМАЦИЕЙ ===
-    let isAnimating = false;
-    let animationTimer = null;
-
-        function updateSizesImmediate() {
+    // === ОСНОВНАЯ ФУНКЦИЯ ПЕРЕСЧЁТА ВЫСОТ И МАСШТАБА ===
+    function resizeLayout() {
         const viewport = window.visualViewport;
         const availableHeight = viewport ? viewport.height : window.innerHeight;
         
@@ -591,8 +593,7 @@
         const hintPanel = document.querySelector('.hint-panel');
         
         const headerHeight = Math.min(Math.max(availableHeight * 0.10, 55), 80);
-        let collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
-        if (collapsedHeight < 40) collapsedHeight = 40;
+        const collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
         
         const isOpen = buildingsPanel.classList.contains('open');
         const buildingsHeight = isOpen ? availableHeight * 0.60 : collapsedHeight;
@@ -606,61 +607,19 @@
         hintPanel.style.height = `${hintHeight}px`;
         mapAreaEl.style.height = `${mapHeight}px`;
         
-        updateImageScale();
+        // ПРИНУДИТЕЛЬНЫЙ ПЕРЕСЧЁТ КАРТЫ (синхронно)
+        const newHeight = mapAreaEl.clientHeight;
+        if (newHeight > 0) {
+            currentScale = newHeight / IMG_H;
+            const newWidth = IMG_W * currentScale;
+            mapImage.style.height = `${newHeight}px`;
+            mapImage.style.width = `${newWidth}px`;
+            mapWrapper.style.width = `${newWidth}px`;
+        }
+        
         updateMarkers();
         drawRoute();
         scrollToKPP();
-    }
-
-    function updateSizesWithAnimation() {
-        if (isAnimating) return;
-        isAnimating = true;
-        
-        const viewport = window.visualViewport;
-        const availableHeight = viewport ? viewport.height : window.innerHeight;
-        
-        const header = document.querySelector('.header');
-        const buildingsPanel = document.querySelector('.buildings-panel');
-        const hintPanel = document.querySelector('.hint-panel');
-        
-        const headerHeight = Math.min(Math.max(availableHeight * 0.10, 55), 80);
-        let collapsedHeight = Math.min(Math.max(availableHeight * 0.07, 40), 55);
-        if (collapsedHeight < 40) collapsedHeight = 40;
-        
-        const isOpen = buildingsPanel.classList.contains('open');
-        const buildingsHeight = isOpen ? availableHeight * 0.60 : collapsedHeight;
-        const hintHeight = collapsedHeight;
-        
-        header.style.height = `${headerHeight}px`;
-        buildingsPanel.style.height = `${buildingsHeight}px`;
-        hintPanel.style.height = `${hintHeight}px`;
-        
-        if (animationTimer) clearTimeout(animationTimer);
-        animationTimer = setTimeout(() => {
-            // Принудительное обновление
-            const mapAreaEl = document.querySelector('.map-area');
-            if (mapAreaEl) {
-                const newHeight = mapAreaEl.clientHeight;
-                if (newHeight > 0) {
-                    const newScale = newHeight / IMG_H;
-                    const newWidth = IMG_W * newScale;
-                    mapImage.style.height = `${newHeight}px`;
-                    mapImage.style.width = `${newWidth}px`;
-                    mapWrapper.style.width = `${newWidth}px`;
-                    currentScale = newScale;
-                }
-            }
-            updateImageScale();
-            updateMarkers();
-            drawRoute();
-            scrollToKPP();
-            isAnimating = false;
-            animationTimer = null;
-        }, 450);
-    }
-
-    function resizeLayout() {
-        updateSizesImmediate();
     }
 
     // Управление панелью корпусов
@@ -671,17 +630,17 @@
     panelHeader.addEventListener('click', () => {
         buildingsPanel.classList.toggle('open');
         panelArrow.classList.toggle('open');
-        updateSizesWithAnimation();
+        resizeLayout();
     });
 
-    // Обработчики
+    // Обработчики изменения размера экрана
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', () => {
-            setTimeout(() => updateSizesImmediate(), 30);
+            setTimeout(resizeLayout, 30);
         });
     }
     window.addEventListener('resize', () => {
-        setTimeout(() => updateSizesImmediate(), 30);
+        setTimeout(resizeLayout, 30);
     });
 
     // СОБЫТИЯ
@@ -699,7 +658,7 @@
     initGraph();
     renderBuildingsList();
     setStartFromQR();
-    updateSizesImmediate();
+    resizeLayout();
 </script>
 </body>
 </html>
