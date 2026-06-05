@@ -314,7 +314,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Инфекционная больница</div>
+        <div class="hospital-name">Ин111фекционная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <div class="header-actions">
@@ -434,8 +434,21 @@
     // === ИНИЦИАЛИЗАЦИЯ КАРТЫ LEAFLET ===
     function initMap() {
         var cfg = appData.config;
+
+        var mapEl = document.getElementById('map');
+        if (!mapEl) {
+            throw new Error('Элемент #map не найден в DOM');
+        }
+
         var mapContainer = document.getElementById('mapContainer');
+        if (!mapContainer) {
+            throw new Error('Элемент #mapContainer не найден в DOM');
+        }
+
         var containerHeight = mapContainer.clientHeight;
+        if (!containerHeight || containerHeight <= 0) {
+            containerHeight = window.innerHeight * 0.5;
+        }
 
         // Зум под высоту контейнера: всё изображение видно по вертикали
         var zoomForHeight = Math.log2(containerHeight / cfg.mapHeight);
@@ -463,9 +476,6 @@
         // maxBounds по высоте совпадает с изображением → вертикальный pan заблокирован
         // по ширине — позволяет горизонтальную прокрутку в пределах изображения
         map.setMaxBounds(bounds);
-
-        // Принудительно убираем зум-контролы, если Leaflet всё же добавит
-        map.zoomControl.remove();
     }
 
     // === СОЗДАНИЕ ИКОНОК МАРКЕРОВ ===
@@ -525,6 +535,7 @@
 
     // === ПОСТРОЕНИЕ МАРШРУТА ===
     function setRoute(buildingId) {
+        if (!map) return;
         if (selectedBuildingId === buildingId) { clearRoute(); return; }
 
         var toKey = 'B' + buildingId;
@@ -558,7 +569,7 @@
     }
 
     function clearRoutePolyline() {
-        if (currentRouteLine) {
+        if (currentRouteLine && map) {
             map.removeLayer(currentRouteLine);
             currentRouteLine = null;
         }
@@ -570,15 +581,18 @@
         updateBuildingMarkerIcons();
         updateRoutePanel(null, 0);
         updateBuildingsListSelection();
-        var bounds = [[0, 0], [appData.config.mapHeight, appData.config.mapWidth]];
-        map.fitBounds(bounds, { animate: true, duration: 0.5 });
+        if (map && appData) {
+            var bounds = [[0, 0], [appData.config.mapHeight, appData.config.mapWidth]];
+            map.fitBounds(bounds, { animate: true, duration: 0.5 });
+        }
     }
 
     function updateBuildingMarkerIcons() {
+        if (!map) return;
         Object.keys(buildingMarkers).forEach(function(bid) {
             var bId = parseInt(bid);
             var marker = buildingMarkers[bid];
-            marker.setIcon(createBuildingIcon(bId, selectedBuildingId === bId));
+            if (marker) marker.setIcon(createBuildingIcon(bId, selectedBuildingId === bId));
         });
     }
 
