@@ -24,22 +24,22 @@
         .header {
             background: rgba(255, 255, 255, 0.96);
             backdrop-filter: blur(10px);
-            padding: 8px 16px;
+            padding: 12px 16px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             border-bottom: 1px solid rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
-            gap: 8px;
+            gap: 10px;
             z-index: 1000;
-            min-height: 48px;
+            min-height: 60px;
         }
         .header-left {
             flex: 1;
             min-width: 0;
         }
         .hospital-name {
-            font-size: clamp(16px, 4vw, 20px);
+            font-size: clamp(18px, 4.5vw, 22px);
             font-weight: 800;
             color: #dc0c0c;
             white-space: nowrap;
@@ -47,10 +47,32 @@
             text-overflow: ellipsis;
         }
         .subtitle {
-            font-size: clamp(11px, 3vw, 13px);
+            font-size: clamp(12px, 3vw, 14px);
             color: #1565C0;
             font-weight: 500;
         }
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .btn-fullscreen {
+            background: #E3F2FD;
+            color: #1565C0;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .btn-fullscreen:active { transform: scale(0.93); background: #BBDEFB; }
         .btn-reset-route {
             background: #EF5350;
             color: white;
@@ -82,13 +104,15 @@
             background: #1a1a2e;
         }
 
-        /* Leaflet overrides */
-        .leaflet-control-zoom {
-            display: none;
-        }
+        /* Leaflet overrides — полное отключение зума */
+        .leaflet-control-zoom { display: none !important; }
+        .leaflet-control-attribution { display: none !important; }
         .leaflet-container {
             background: #1a1a2e;
+            cursor: ew-resize !important;
         }
+        .leaflet-grab { cursor: ew-resize !important; }
+        .leaflet-dragging .leaflet-grab { cursor: ew-resize !important; }
 
         /* Кастомные маркеры */
         .building-marker {
@@ -293,7 +317,10 @@
         <div class="hospital-name">Инфекционная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
-    <button class="btn-reset-route" id="btnResetRoute">✕ Сбросить</button>
+    <div class="header-actions">
+        <button class="btn-fullscreen" id="btnFullscreen" title="На весь экран" aria-label="На весь экран">⛶</button>
+        <button class="btn-reset-route" id="btnResetRoute">✕ Сбросить</button>
+    </div>
 </div>
 
 <div class="map-container" id="mapContainer">
@@ -314,7 +341,7 @@
 
 <div class="hint-panel">
     <div class="hint-text">
-        <span class="emoji">👆</span> Нажмите на корпус, чтобы построить маршрут
+            <span class="emoji">👆</span> Нажми на корпус, чтобы построить маршрут
     </div>
 </div>
 
@@ -407,11 +434,24 @@
     // === ИНИЦИАЛИЗАЦИЯ КАРТЫ LEAFLET ===
     function initMap() {
         var cfg = appData.config;
+        var mapContainer = document.getElementById('mapContainer');
+        var containerHeight = mapContainer.clientHeight;
+
+        // Зум под высоту контейнера: всё изображение видно по вертикали
+        var zoomForHeight = Math.log2(containerHeight / cfg.mapHeight);
+
         map = L.map('map', {
             crs: L.CRS.Simple,
-            minZoom: -2,
-            maxZoom: 2,
+            center: [cfg.mapHeight / 2, cfg.mapWidth / 2],
+            zoom: zoomForHeight,
+            minZoom: zoomForHeight,
+            maxZoom: zoomForHeight,
             zoomControl: false,
+            scrollWheelZoom: false,
+            doubleClickZoom: false,
+            boxZoom: false,
+            keyboard: false,
+            touchZoom: false,
             attributionControl: false,
             dragging: true,
             tap: true
@@ -419,7 +459,13 @@
 
         var bounds = [[0, 0], [cfg.mapHeight, cfg.mapWidth]];
         L.imageOverlay(cfg.mapImage, bounds).addTo(map);
-        map.fitBounds(bounds);
+
+        // maxBounds по высоте совпадает с изображением → вертикальный pan заблокирован
+        // по ширине — позволяет горизонтальную прокрутку в пределах изображения
+        map.setMaxBounds(bounds);
+
+        // Принудительно убираем зум-контролы, если Leaflet всё же добавит
+        map.zoomControl.remove();
     }
 
     // === СОЗДАНИЕ ИКОНОК МАРКЕРОВ ===
@@ -507,8 +553,8 @@
         updateRoutePanel(buildingId, result.distance);
         updateBuildingsListSelection();
 
-        // Анимация к маршруту
-        map.flyToBounds(currentRouteLine.getBounds().pad(0.4), { duration: 0.6 });
+        // Панорамирование к маршруту (зум зафиксирован)
+        map.fitBounds(currentRouteLine.getBounds().pad(0.3), { animate: true, duration: 0.6 });
     }
 
     function clearRoutePolyline() {
@@ -525,7 +571,7 @@
         updateRoutePanel(null, 0);
         updateBuildingsListSelection();
         var bounds = [[0, 0], [appData.config.mapHeight, appData.config.mapWidth]];
-        map.flyToBounds(bounds, { duration: 0.5 });
+        map.fitBounds(bounds, { animate: true, duration: 0.5 });
     }
 
     function updateBuildingMarkerIcons() {
@@ -626,6 +672,21 @@
         window.addEventListener('resize', function() { setTimeout(onResize, 50); });
     }
 
+    // === FULLSCREEN ===
+    function setupFullscreen() {
+        var btn = document.getElementById('btnFullscreen');
+        btn.addEventListener('click', function() {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                document.documentElement.requestFullscreen();
+            }
+        });
+        document.addEventListener('fullscreenchange', function() {
+            if (map) setTimeout(function() { map.invalidateSize(); }, 100);
+        });
+    }
+
     // === ЗАПУСК ===
     async function main() {
         await loadData();
@@ -636,6 +697,7 @@
         renderBuildingsList();
         setupPanelToggle();
         setupResizeHandler();
+        setupFullscreen();
 
         document.getElementById('btnResetRoute').addEventListener('click', clearRoute);
         document.getElementById('btnCloseRoute').addEventListener('click', clearRoute);
