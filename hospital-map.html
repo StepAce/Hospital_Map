@@ -297,7 +297,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Инфекционна8я больница</div>
+        <div class="hospital-name">Инфекционна43я больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <div class="header-actions">
@@ -711,87 +711,144 @@
     }
 
     // === ПАНЕЛЬ КОРПУСОВ: JS-АНИМАЦИЯ ===
-    function setupPanelToggle() {
-        var panel = document.getElementById('buildingsPanel');
-        var header = document.getElementById('panelHeader');
-        
-        var ANIMATION_DURATION = 400;
-        var animationId = null;
-        var isPanelOpen = false;
-        
-        function easeInOutCubic(t) {
-            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+function setupPanelToggle() {
+    var panel = document.getElementById('buildingsPanel');
+    var header = document.getElementById('panelHeader');
+    
+    var ANIMATION_DURATION = 400;
+    var TRANSITION_DURATION = 150; // Длительность плавного перехода между режимами
+    var animationId = null;
+    var isPanelOpen = false;
+    
+    function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+    
+    function getTargetHeight(open) {
+        if (open) {
+            var viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            var headerEl = document.querySelector('.header');
+            var hintPanel = document.querySelector('.hint-panel');
+            var img = document.getElementById('mapImage');
+            var wrapper = document.getElementById('mapWrapper');
+            
+            var headerHeight = headerEl ? headerEl.offsetHeight : 0;
+            var hintHeight = hintPanel ? hintPanel.offsetHeight : 0;
+            
+            var wrapperWidth = wrapper.clientWidth;
+            var mapHeight = (img.naturalHeight * wrapperWidth) / img.naturalWidth;
+            
+            return viewportHeight - headerHeight - hintHeight - mapHeight;
+        }
+        return 46;
+    }
+    
+    function animatePanelHeight(fromHeight, toHeight, targetOpen) {
+        if (animationId) {
+            cancelAnimationFrame(animationId);
         }
         
-        function getTargetHeight(open) {
-            if (open) {
-                var viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-                var headerEl = document.querySelector('.header');
-                var hintPanel = document.querySelector('.hint-panel');
-                var img = document.getElementById('mapImage');
-                var wrapper = document.getElementById('mapWrapper');
-                
-                var headerHeight = headerEl ? headerEl.offsetHeight : 0;
-                var hintHeight = hintPanel ? hintPanel.offsetHeight : 0;
-                
-                // Когда панель открыта, карта масштабируется по ширине
-                var wrapperWidth = wrapper.clientWidth;
-                var mapHeight = (img.naturalHeight * wrapperWidth) / img.naturalWidth;
-                
-                // Панель занимает всё оставшееся пространство
-                return viewportHeight - headerHeight - hintHeight - mapHeight;
-            }
-            return 46;
-        }
+        var startTime = null;
         
-        function animatePanelHeight(fromHeight, toHeight, targetOpen) {
-            if (animationId) {
-                cancelAnimationFrame(animationId);
-            }
+        function step(timestamp) {
+            if (!startTime) startTime = timestamp;
+            var elapsed = timestamp - startTime;
+            var progress = Math.min(elapsed / ANIMATION_DURATION, 1);
+            var easedProgress = easeInOutCubic(progress);
             
-            var startTime = null;
+            var currentHeight = fromHeight + (toHeight - fromHeight) * easedProgress;
+            panel.style.height = currentHeight + 'px';
             
-            function step(timestamp) {
-                if (!startTime) startTime = timestamp;
-                var elapsed = timestamp - startTime;
-                var progress = Math.min(elapsed / ANIMATION_DURATION, 1);
-                var easedProgress = easeInOutCubic(progress);
-                
-                var currentHeight = fromHeight + (toHeight - fromHeight) * easedProgress;
-                panel.style.height = currentHeight + 'px';
-                
-                applyScale(false);
-                repositionMarkers();
-                
-                if (progress < 1) {
-                    animationId = requestAnimationFrame(step);
-                } else {
-                    animationId = null;
-                    if (targetOpen) {
-                        applyScale(true);
-                        repositionMarkers();
-                    }
+            // Во время анимации всегда масштабируем по высоте
+            applyScale(false);
+            repositionMarkers();
+            
+            if (progress < 1) {
+                animationId = requestAnimationFrame(step);
+            } else {
+                animationId = null;
+                // После завершения анимации открытия — плавный переход на режим "по ширине"
+                if (targetOpen) {
+                    smoothTransitionToWidthMode();
                 }
             }
-            
-            animationId = requestAnimationFrame(step);
         }
         
-        header.addEventListener('click', function() {
-            isPanelOpen = !isPanelOpen;
+        animationId = requestAnimationFrame(step);
+    }
+    
+    // Плавный переход от режима "по высоте" к режиму "по ширине"
+    function smoothTransitionToWidthMode() {
+        var img = document.getElementById('mapImage');
+        var wrapper = document.getElementById('mapWrapper');
+        
+        // Запоминаем текущие размеры (режим "по высоте")
+        var startWidth = img.offsetWidth;
+        var startHeight = img.offsetHeight;
+        
+        // Вычисляем целевые размеры (режим "по ширине")
+        var wrapperWidth = wrapper.clientWidth;
+        var targetWidth = wrapperWidth;
+        var targetHeight = (img.naturalHeight * wrapperWidth) / img.naturalWidth;
+        
+        var startTime = null;
+        
+        function step(timestamp) {
+            if (!startTime) startTime = timestamp;
+            var elapsed = timestamp - startTime;
+            var progress = Math.min(elapsed / TRANSITION_DURATION, 1);
+            var easedProgress = easeInOutCubic(progress);
             
-            var currentHeight = panel.offsetHeight;
-            var targetHeight = getTargetHeight(isPanelOpen);
+            var currentWidth = startWidth + (targetWidth - startWidth) * easedProgress;
+            var currentHeight = startHeight + (targetHeight - startHeight) * easedProgress;
             
-            if (isPanelOpen) {
-                panel.classList.add('open');
-            } else {
-                panel.classList.remove('open');
+            // Применяем промежуточные размеры
+            scale = currentWidth / img.naturalWidth;
+            mapSizes = { totalWidth: currentWidth, totalHeight: currentHeight };
+            
+            wrapper.style.height = currentHeight + 'px';
+            img.style.width = currentWidth + 'px';
+            img.style.height = currentHeight + 'px';
+            
+            var markersLayer = document.getElementById('markersLayer');
+            markersLayer.style.width = currentWidth + 'px';
+            markersLayer.style.height = currentHeight + 'px';
+            
+            if (routeCanvasEl) {
+                var dpr = window.devicePixelRatio || 1;
+                routeCanvasEl.width = currentWidth * dpr;
+                routeCanvasEl.height = currentHeight * dpr;
+                routeCanvasEl.style.width = currentWidth + 'px';
+                routeCanvasEl.style.height = currentHeight + 'px';
+                routeCtx = routeCanvasEl.getContext('2d');
+                routeCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
             }
             
-            animatePanelHeight(currentHeight, targetHeight, isPanelOpen);
-        });
+            repositionMarkers();
+            
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            }
+        }
+        
+        requestAnimationFrame(step);
     }
+    
+    header.addEventListener('click', function() {
+        isPanelOpen = !isPanelOpen;
+        
+        var currentHeight = panel.offsetHeight;
+        var targetHeight = getTargetHeight(isPanelOpen);
+        
+        if (isPanelOpen) {
+            panel.classList.add('open');
+        } else {
+            panel.classList.remove('open');
+        }
+        
+        animatePanelHeight(currentHeight, targetHeight, isPanelOpen);
+    });
+}
 
     // === ОБРАБОТКА QR-ПАРАМЕТРА ===
     function handleQRParam() {
