@@ -2,12 +2,17 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#1565C0">
     <title>Инфекционная больница — навигация</title>
     <link rel="manifest" href="manifest.json">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            touch-action: manipulation; /* Отключает двойной тап для зума */
+            -webkit-text-size-adjust: 100%; /* Отключает авто-зум текста на iOS */
+        }
 
         body {
             background: #1a1a2e;
@@ -211,6 +216,9 @@
             z-index: 1000;
             height: 46px;
         }
+        .buildings-panel.open {
+            flex: 1; /* Занимает всё оставшееся пространство */
+        }
         .panel-header {
             padding: 10px 20px;
             display: flex;
@@ -289,7 +297,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Инфекционная больница</div>
+        <div class="hospital-name">Инфекционна8я больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <div class="header-actions">
@@ -442,12 +450,10 @@
         var totalWidth, totalHeight;
         
         if (forceWidthMode) {
-            // Режим "по ширине" — только когда панель полностью открыта
             scale = wrapperWidth / naturalWidth;
             totalWidth = wrapperWidth;
             totalHeight = naturalHeight * scale;
         } else {
-            // Режим "по высоте" — учитываем текущую высоту панели
             var availableHeight = getAvailableHeight();
             scale = availableHeight / naturalHeight;
             totalWidth = naturalWidth * scale;
@@ -484,7 +490,6 @@
         var usedHeight = 0;
         if (header) usedHeight += header.offsetHeight;
         if (hintPanel) usedHeight += hintPanel.offsetHeight;
-        // ВСЕГДА учитываем текущую высоту панели (независимо от класса .open)
         if (buildingsPanel) {
             usedHeight += buildingsPanel.offsetHeight;
         }
@@ -709,7 +714,6 @@
     function setupPanelToggle() {
         var panel = document.getElementById('buildingsPanel');
         var header = document.getElementById('panelHeader');
-        var arrow = document.getElementById('panelArrow');
         
         var ANIMATION_DURATION = 400;
         var animationId = null;
@@ -722,7 +726,20 @@
         function getTargetHeight(open) {
             if (open) {
                 var viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-                return Math.min(viewportHeight * 0.55, 420);
+                var headerEl = document.querySelector('.header');
+                var hintPanel = document.querySelector('.hint-panel');
+                var img = document.getElementById('mapImage');
+                var wrapper = document.getElementById('mapWrapper');
+                
+                var headerHeight = headerEl ? headerEl.offsetHeight : 0;
+                var hintHeight = hintPanel ? hintPanel.offsetHeight : 0;
+                
+                // Когда панель открыта, карта масштабируется по ширине
+                var wrapperWidth = wrapper.clientWidth;
+                var mapHeight = (img.naturalHeight * wrapperWidth) / img.naturalWidth;
+                
+                // Панель занимает всё оставшееся пространство
+                return viewportHeight - headerHeight - hintHeight - mapHeight;
             }
             return 46;
         }
@@ -743,7 +760,6 @@
                 var currentHeight = fromHeight + (toHeight - fromHeight) * easedProgress;
                 panel.style.height = currentHeight + 'px';
                 
-                // Во время анимации всегда масштабируем по высоте
                 applyScale(false);
                 repositionMarkers();
                 
@@ -751,7 +767,6 @@
                     animationId = requestAnimationFrame(step);
                 } else {
                     animationId = null;
-                    // В конце анимации, если панель открыта, переключаемся на масштаб по ширине
                     if (targetOpen) {
                         applyScale(true);
                         repositionMarkers();
