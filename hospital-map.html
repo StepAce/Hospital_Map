@@ -99,8 +99,6 @@
         }
         .map-scroll-container img {
             display: block;
-            height: 100%;
-            width: auto;
             pointer-events: none;
             user-select: none;
             -webkit-user-drag: none;
@@ -294,7 +292,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Инфе654кционная больница</div>
+        <div class="hospital-name">Инфекционная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <div class="header-actions">
@@ -345,7 +343,7 @@
     var routeCanvasEl = null;
     var routeCtx = null;
     var scrollContainer = null;
-    var mapSizes = null; // { totalWidth, totalHeight }
+    var mapSizes = null;
 
     // === ЗАГРУЗКА ДАННЫХ ===
     async function loadData() {
@@ -415,7 +413,7 @@
         return { nodes: path, distance: dist[toKey] };
     }
 
-    // === ИНИЦИАЛИЗАЦИЯ КАРТЫ (нативный скролл) ===
+    // === ИНИЦИАЛИЗАЦИЯ КАРТЫ ===
     function initMap() {
         var cfg = appData.config;
         var img = document.getElementById('mapImage');
@@ -425,7 +423,7 @@
 
         return new Promise(function(resolve, reject) {
             img.onload = function() {
-                applyScale(container.clientHeight, img.naturalWidth, img.naturalHeight);
+                recalculateLayout();
                 resolve();
             };
             img.onerror = function() {
@@ -435,22 +433,47 @@
         });
     }
 
-    function applyScale(containerHeight, naturalWidth, naturalHeight) {
-        scale = containerHeight / naturalHeight;
-        var totalWidth = naturalWidth * scale;
+    // === НОВАЯ ЛОГИКА МАСШТАБИРОВАНИЯ ===
+    function applyScale(isPanelOpen) {
+        var container = document.getElementById('mapContainer');
+        var img = document.getElementById('mapImage');
+        
+        var containerWidth = container.clientWidth;
+        var containerHeight = container.clientHeight;
+        var naturalWidth = img.naturalWidth;
+        var naturalHeight = img.naturalHeight;
+        
+        var totalWidth, totalHeight;
+        
+        if (isPanelOpen) {
+            // Панель ОТКРЫТА: масштабируем по ШИРИНЕ
+            scale = containerWidth / naturalWidth;
+            totalWidth = containerWidth;
+            totalHeight = naturalHeight * scale;
+        } else {
+            // Панель ЗАКРЫТА: масштабируем по ВЫСОТЕ
+            scale = containerHeight / naturalHeight;
+            totalWidth = naturalWidth * scale;
+            totalHeight = containerHeight;
+        }
 
-        mapSizes = { totalWidth: totalWidth, totalHeight: containerHeight };
+        mapSizes = { totalWidth: totalWidth, totalHeight: totalHeight };
 
+        // Применяем размеры к картинке
+        img.style.width = totalWidth + 'px';
+        img.style.height = totalHeight + 'px';
+
+        // Устанавливаем точные размеры для слоев маркеров и canvas
         var markersLayer = document.getElementById('markersLayer');
         markersLayer.style.width = totalWidth + 'px';
-        markersLayer.style.height = containerHeight + 'px';
+        markersLayer.style.height = totalHeight + 'px';
 
         if (routeCanvasEl) {
             var dpr = window.devicePixelRatio || 1;
             routeCanvasEl.width = totalWidth * dpr;
-            routeCanvasEl.height = containerHeight * dpr;
+            routeCanvasEl.height = totalHeight * dpr;
             routeCanvasEl.style.width = totalWidth + 'px';
-            routeCanvasEl.style.height = containerHeight + 'px';
+            routeCanvasEl.style.height = totalHeight + 'px';
             routeCtx = routeCanvasEl.getContext('2d');
             routeCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
@@ -465,7 +488,28 @@
                 el.style.top = (b.y * scale) + 'px';
             }
         });
-        // Перерисовать маршрут если есть
+        
+        // Пересчитываем callout-маркеры
+        var markersLayer = document.getElementById('markersLayer');
+        var callouts = markersLayer.querySelectorAll('.callout-marker');
+        callouts.forEach(function(cel, index) {
+            if (appData.buildings[index] && appData.buildings[index].callout) {
+                var callout = appData.buildings[index].callout;
+                cel.style.left = (callout.x * scale) + 'px';
+                cel.style.top = (callout.y * scale) + 'px';
+            }
+        });
+        
+        // Пересчитываем стартовый маркер
+        var startMarker = markersLayer.querySelector('.start-marker');
+        if (startMarker) {
+            var sp = appData.startPoints.find(function(p) { return p.id === startKey; });
+            if (sp) {
+                startMarker.style.left = (sp.x * scale) + 'px';
+                startMarker.style.top = (sp.y * scale) + 'px';
+            }
+        }
+        
         redrawCurrentRoute();
     }
 
@@ -656,6 +700,8 @@
         var header = document.getElementById('panelHeader');
         header.addEventListener('click', function() {
             panel.classList.toggle('open');
+            // Даем браузеру время применить CSS-изменения, потом пересчитываем
+            setTimeout(recalculateLayout, 100);
         });
         panel.addEventListener('transitionend', function(e) {
             if (e.propertyName === 'height' && e.target === panel) {
@@ -680,12 +726,18 @@
     function recalculateLayout() {
         var container = document.getElementById('mapContainer');
         var img = document.getElementById('mapImage');
+        var panel = document.getElementById('buildingsPanel');
+        
         if (!container || !img || !img.naturalWidth) return;
 
         var containerHeight = container.clientHeight;
         if (!containerHeight || containerHeight <= 0) return;
 
-        applyScale(containerHeight, img.naturalWidth, img.naturalHeight);
+        // Проверяем, открыта ли панель
+        var isPanelOpen = panel.classList.contains('open');
+        
+        // Применяем масштаб в зависимости от состояния панели
+        applyScale(isPanelOpen);
         repositionMarkers();
     }
 
