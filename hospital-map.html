@@ -81,7 +81,7 @@
 
         /* ===== КАРТА ===== */
         .map-wrapper {
-            flex: 0 0 auto; /* Ключевое изменение: не растягивается, занимает только нужное место */
+            flex: 0 0 auto;
             position: relative;
             background: #1a1a2e;
             width: 100%;
@@ -208,14 +208,15 @@
             border-top: 1px solid rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
             overflow: hidden;
-            transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 1000;
+            will-change: height;
         }
         .buildings-panel:not(.open) { height: 46px; }
         .buildings-panel.open { 
             height: min(55vh, 420px); 
-            flex: 1; /* Занимает всё оставшееся пространство */
-            min-height: 120px; /* Минимальная высота */
+            flex: 1;
+            min-height: 120px;
         }
         .panel-header {
             padding: 10px 20px;
@@ -295,7 +296,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Инфекционная больница</div>
+        <div class="hospital-name">Инфе11кционная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <div class="header-actions">
@@ -436,7 +437,7 @@
         });
     }
 
-    // === НОВАЯ ЛОГИКА МАСШТАБИРОВАНИЯ ===
+    // === ЛОГИКА МАСШТАБИРОВАНИЯ ===
     function applyScale(isPanelOpen) {
         var wrapper = document.getElementById('mapWrapper');
         var img = document.getElementById('mapImage');
@@ -566,7 +567,7 @@
             if (sp.id === startKey) {
                 var sel = document.createElement('div');
                 sel.className = 'start-marker';
-                sel.textContent = '📍';
+                sel.textContent = '';
                 sel.style.left = (sp.x * scale) + 'px';
                 sel.style.top = (sp.y * scale) + 'px';
                 markersLayer.appendChild(sel);
@@ -718,26 +719,42 @@
     function setupPanelToggle() {
         var panel = document.getElementById('buildingsPanel');
         var header = document.getElementById('panelHeader');
+        var isAnimating = false;
+        var animationFrameId = null;
         
-        // Для плавной анимации пересчитываем размеры во время transition
-        let resizeObserver;
-        if (typeof ResizeObserver !== 'undefined') {
-            resizeObserver = new ResizeObserver(() => {
-                recalculateLayout();
-            });
-            resizeObserver.observe(panel);
+        // Функция плавного обновления во время анимации
+        function animateLayout() {
+            if (!isAnimating) return;
+            
+            recalculateLayout();
+            
+            // Продолжаем анимацию до завершения
+            animationFrameId = requestAnimationFrame(animateLayout);
         }
         
         header.addEventListener('click', function() {
-            panel.classList.toggle('open');
-            // Для браузеров без ResizeObserver
-            if (!resizeObserver) {
-                const handleTransition = () => {
-                    recalculateLayout();
-                    panel.removeEventListener('transitionend', handleTransition);
-                };
-                panel.addEventListener('transitionend', handleTransition);
+            // Если уже идет анимация — отменяем предыдущую
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+                animationFrameId = null;
             }
+            
+            panel.classList.toggle('open');
+            
+            // Запускаем плавную анимацию пересчета
+            isAnimating = true;
+            animateLayout();
+            
+            // Останавливаем анимацию после завершения CSS-transition
+            setTimeout(function() {
+                isAnimating = false;
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                    animationFrameId = null;
+                }
+                // Финальный пересчет для точности
+                recalculateLayout();
+            }, 450); // Чуть больше длительности transition (0.4s)
         });
     }
 
