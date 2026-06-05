@@ -97,22 +97,30 @@
             position: relative;
             overflow: hidden;
             min-height: 0;
+            background: #1a1a2e;
+            touch-action: pan-x !important;
+            overscroll-behavior: contain;
         }
         #map {
             width: 100%;
             height: 100%;
             background: #1a1a2e;
+            touch-action: pan-x !important;
         }
 
-        /* Leaflet overrides — полное отключение зума */
+        /* Leaflet overrides — полное отключение зума и синих полей */
         .leaflet-control-zoom { display: none !important; }
         .leaflet-control-attribution { display: none !important; }
         .leaflet-container {
-            background: #1a1a2e;
+            background: #1a1a2e !important;
             cursor: ew-resize !important;
+            touch-action: pan-x !important;
         }
         .leaflet-grab { cursor: ew-resize !important; }
         .leaflet-dragging .leaflet-grab { cursor: ew-resize !important; }
+        .leaflet-tile-pane { opacity: 1; }
+        .leaflet-overlay-pane { pointer-events: auto; }
+        .leaflet-pane { background: #1a1a2e; }
 
         /* Кастомные маркеры */
         .building-marker {
@@ -314,7 +322,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Ин111фекционная больница</div>
+        <div class="hospital-name">Инфекционная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <div class="header-actions">
@@ -467,7 +475,10 @@
             touchZoom: false,
             attributionControl: false,
             dragging: true,
-            tap: true
+            bounceAtZoomLimits: false,
+            inertia: true,
+            inertiaDeceleration: 2000,
+            worldCopyJump: false
         });
 
         var bounds = [[0, 0], [cfg.mapHeight, cfg.mapWidth]];
@@ -476,6 +487,15 @@
         // maxBounds по высоте совпадает с изображением → вертикальный pan заблокирован
         // по ширине — позволяет горизонтальную прокрутку в пределах изображения
         map.setMaxBounds(bounds);
+
+        // Жёсткая блокировка вертикального pan: сбрасываем Y на центр при любом смещении
+        var centerY = cfg.mapHeight / 2;
+        map.on('move', function() {
+            var curCenter = map.getCenter();
+            if (Math.abs(curCenter.lat - centerY) > 0.5) {
+                map.panTo([centerY, curCenter.lng], { animate: false });
+            }
+        });
     }
 
     // === СОЗДАНИЕ ИКОНОК МАРКЕРОВ ===
