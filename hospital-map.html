@@ -209,7 +209,7 @@
             flex-shrink: 0;
             overflow: hidden;
             z-index: 1000;
-            height: 46px; /* Начальная высота */
+            height: 46px;
         }
         .panel-header {
             padding: 10px 20px;
@@ -431,7 +431,7 @@
     }
 
     // === ЛОГИКА МАСШТАБИРОВАНИЯ ===
-    function applyScale(isPanelOpen) {
+    function applyScale(forceWidthMode) {
         var wrapper = document.getElementById('mapWrapper');
         var img = document.getElementById('mapImage');
         
@@ -441,13 +441,13 @@
         
         var totalWidth, totalHeight;
         
-        if (isPanelOpen) {
-            // Панель ОТКРЫТА: масштабируем по ШИРИНЕ
+        if (forceWidthMode) {
+            // Режим "по ширине" — только когда панель полностью открыта
             scale = wrapperWidth / naturalWidth;
             totalWidth = wrapperWidth;
             totalHeight = naturalHeight * scale;
         } else {
-            // Панель ЗАКРЫТА: масштабируем по ВЫСОТЕ доступного пространства
+            // Режим "по высоте" — учитываем текущую высоту панели
             var availableHeight = getAvailableHeight();
             scale = availableHeight / naturalHeight;
             totalWidth = naturalWidth * scale;
@@ -456,12 +456,10 @@
 
         mapSizes = { totalWidth: totalWidth, totalHeight: totalHeight };
 
-        // Применяем размеры к контейнеру и картинке
         wrapper.style.height = totalHeight + 'px';
         img.style.width = totalWidth + 'px';
         img.style.height = totalHeight + 'px';
 
-        // Устанавливаем точные размеры для слоев маркеров и canvas
         var markersLayer = document.getElementById('markersLayer');
         markersLayer.style.width = totalWidth + 'px';
         markersLayer.style.height = totalHeight + 'px';
@@ -486,6 +484,7 @@
         var usedHeight = 0;
         if (header) usedHeight += header.offsetHeight;
         if (hintPanel) usedHeight += hintPanel.offsetHeight;
+        // ВСЕГДА учитываем текущую высоту панели (независимо от класса .open)
         if (buildingsPanel) {
             usedHeight += buildingsPanel.offsetHeight;
         }
@@ -503,7 +502,6 @@
             }
         });
         
-        // Пересчитываем callout-маркеры
         var markersLayer = document.getElementById('markersLayer');
         var callouts = markersLayer.querySelectorAll('.callout-marker');
         callouts.forEach(function(cel, index) {
@@ -514,7 +512,6 @@
             }
         });
         
-        // Пересчитываем стартовый маркер
         var startMarker = markersLayer.querySelector('.start-marker');
         if (startMarker) {
             var sp = appData.startPoints.find(function(p) { return p.id === startKey; });
@@ -714,7 +711,7 @@
         var header = document.getElementById('panelHeader');
         var arrow = document.getElementById('panelArrow');
         
-        var ANIMATION_DURATION = 400; // мс
+        var ANIMATION_DURATION = 400;
         var animationId = null;
         var isPanelOpen = false;
         
@@ -722,7 +719,15 @@
             return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
         }
         
-        function animatePanelHeight(fromHeight, toHeight) {
+        function getTargetHeight(open) {
+            if (open) {
+                var viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                return Math.min(viewportHeight * 0.55, 420);
+            }
+            return 46;
+        }
+        
+        function animatePanelHeight(fromHeight, toHeight, targetOpen) {
             if (animationId) {
                 cancelAnimationFrame(animationId);
             }
@@ -738,15 +743,19 @@
                 var currentHeight = fromHeight + (toHeight - fromHeight) * easedProgress;
                 panel.style.height = currentHeight + 'px';
                 
-                // Пересчитываем карту во время анимации
-                recalculateLayout();
+                // Во время анимации всегда масштабируем по высоте
+                applyScale(false);
+                repositionMarkers();
                 
                 if (progress < 1) {
                     animationId = requestAnimationFrame(step);
                 } else {
                     animationId = null;
-                    // Финальный пересчет
-                    recalculateLayout();
+                    // В конце анимации, если панель открыта, переключаемся на масштаб по ширине
+                    if (targetOpen) {
+                        applyScale(true);
+                        repositionMarkers();
+                    }
                 }
             }
             
@@ -756,28 +765,16 @@
         header.addEventListener('click', function() {
             isPanelOpen = !isPanelOpen;
             
+            var currentHeight = panel.offsetHeight;
+            var targetHeight = getTargetHeight(isPanelOpen);
+            
             if (isPanelOpen) {
-                // Вычисляем целевую высоту
-                var viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-                var header = document.querySelector('.header');
-                var hintPanel = document.querySelector('.hint-panel');
-                var maxPanelHeight = Math.min(viewportHeight * 0.55, 420);
-                
-                var currentHeight = panel.offsetHeight;
-                animatePanelHeight(currentHeight, maxPanelHeight);
                 panel.classList.add('open');
             } else {
-                var currentHeight = panel.offsetHeight;
-                animatePanelHeight(currentHeight, 46);
                 panel.classList.remove('open');
             }
             
-            // Анимация стрелки
-            if (isPanelOpen) {
-                arrow.style.transform = 'rotate(180deg)';
-            } else {
-                arrow.style.transform = 'rotate(0deg)';
-            }
+            animatePanelHeight(currentHeight, targetHeight, isPanelOpen);
         });
     }
 
