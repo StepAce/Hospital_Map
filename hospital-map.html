@@ -208,15 +208,8 @@
             border-top: 1px solid rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
             overflow: hidden;
-            transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 1000;
-            will-change: height;
-        }
-        .buildings-panel:not(.open) { height: 46px; }
-        .buildings-panel.open { 
-            height: min(55vh, 420px); 
-            flex: 1;
-            min-height: 120px;
+            height: 46px; /* Начальная высота */
         }
         .panel-header {
             padding: 10px 20px;
@@ -235,7 +228,7 @@
         }
         .panel-arrow {
             font-size: 20px;
-            transition: transform 0.35s;
+            transition: transform 0.4s ease;
         }
         .buildings-panel.open .panel-arrow { transform: rotate(180deg); }
         .buildings-list {
@@ -296,7 +289,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Инфе11кционная больница</div>
+        <div class="hospital-name">Инфекционная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <div class="header-actions">
@@ -493,7 +486,7 @@
         var usedHeight = 0;
         if (header) usedHeight += header.offsetHeight;
         if (hintPanel) usedHeight += hintPanel.offsetHeight;
-        if (buildingsPanel && !buildingsPanel.classList.contains('open')) {
+        if (buildingsPanel) {
             usedHeight += buildingsPanel.offsetHeight;
         }
         
@@ -567,7 +560,7 @@
             if (sp.id === startKey) {
                 var sel = document.createElement('div');
                 sel.className = 'start-marker';
-                sel.textContent = '';
+                sel.textContent = '📍';
                 sel.style.left = (sp.x * scale) + 'px';
                 sel.style.top = (sp.y * scale) + 'px';
                 markersLayer.appendChild(sel);
@@ -715,46 +708,76 @@
         return div.innerHTML;
     }
 
-    // === ПАНЕЛЬ КОРПУСОВ: СВОРАЧИВАНИЕ/РАЗВОРАЧИВАНИЕ ===
+    // === ПАНЕЛЬ КОРПУСОВ: JS-АНИМАЦИЯ ===
     function setupPanelToggle() {
         var panel = document.getElementById('buildingsPanel');
         var header = document.getElementById('panelHeader');
-        var isAnimating = false;
-        var animationFrameId = null;
+        var arrow = document.getElementById('panelArrow');
         
-        // Функция плавного обновления во время анимации
-        function animateLayout() {
-            if (!isAnimating) return;
+        var ANIMATION_DURATION = 400; // мс
+        var animationId = null;
+        var isPanelOpen = false;
+        
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+        
+        function animatePanelHeight(fromHeight, toHeight) {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
             
-            recalculateLayout();
+            var startTime = null;
             
-            // Продолжаем анимацию до завершения
-            animationFrameId = requestAnimationFrame(animateLayout);
+            function step(timestamp) {
+                if (!startTime) startTime = timestamp;
+                var elapsed = timestamp - startTime;
+                var progress = Math.min(elapsed / ANIMATION_DURATION, 1);
+                var easedProgress = easeInOutCubic(progress);
+                
+                var currentHeight = fromHeight + (toHeight - fromHeight) * easedProgress;
+                panel.style.height = currentHeight + 'px';
+                
+                // Пересчитываем карту во время анимации
+                recalculateLayout();
+                
+                if (progress < 1) {
+                    animationId = requestAnimationFrame(step);
+                } else {
+                    animationId = null;
+                    // Финальный пересчет
+                    recalculateLayout();
+                }
+            }
+            
+            animationId = requestAnimationFrame(step);
         }
         
         header.addEventListener('click', function() {
-            // Если уже идет анимация — отменяем предыдущую
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-                animationFrameId = null;
+            isPanelOpen = !isPanelOpen;
+            
+            if (isPanelOpen) {
+                // Вычисляем целевую высоту
+                var viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+                var header = document.querySelector('.header');
+                var hintPanel = document.querySelector('.hint-panel');
+                var maxPanelHeight = Math.min(viewportHeight * 0.55, 420);
+                
+                var currentHeight = panel.offsetHeight;
+                animatePanelHeight(currentHeight, maxPanelHeight);
+                panel.classList.add('open');
+            } else {
+                var currentHeight = panel.offsetHeight;
+                animatePanelHeight(currentHeight, 46);
+                panel.classList.remove('open');
             }
             
-            panel.classList.toggle('open');
-            
-            // Запускаем плавную анимацию пересчета
-            isAnimating = true;
-            animateLayout();
-            
-            // Останавливаем анимацию после завершения CSS-transition
-            setTimeout(function() {
-                isAnimating = false;
-                if (animationFrameId) {
-                    cancelAnimationFrame(animationFrameId);
-                    animationFrameId = null;
-                }
-                // Финальный пересчет для точности
-                recalculateLayout();
-            }, 450); // Чуть больше длительности transition (0.4s)
+            // Анимация стрелки
+            if (isPanelOpen) {
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                arrow.style.transform = 'rotate(0deg)';
+            }
         });
     }
 
