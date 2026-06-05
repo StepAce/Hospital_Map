@@ -322,7 +322,7 @@
 
 <div class="header">
     <div class="header-left">
-        <div class="hospital-name">Инфекционная больница</div>
+        <div class="hospital-name">Инфек222ционная больница</div>
         <div class="subtitle">Навигационная карта</div>
     </div>
     <div class="header-actions">
@@ -488,13 +488,19 @@
         // по ширине — позволяет горизонтальную прокрутку в пределах изображения
         map.setMaxBounds(bounds);
 
-        // Жёсткая блокировка вертикального pan: сбрасываем Y на центр при любом смещении
+        // Лёгкий throttle на moveend: корректирует Y только в конце перетаскивания
         var centerY = cfg.mapHeight / 2;
-        map.on('move', function() {
-            var curCenter = map.getCenter();
-            if (Math.abs(curCenter.lat - centerY) > 0.5) {
-                map.panTo([centerY, curCenter.lng], { animate: false });
-            }
+        var verticalLockPending = false;
+        map.on('moveend', function() {
+            if (verticalLockPending) return;
+            verticalLockPending = true;
+            requestAnimationFrame(function() {
+                var curCenter = map.getCenter();
+                if (Math.abs(curCenter.lat - centerY) > 1) {
+                    map.panTo([centerY, curCenter.lng], { animate: false });
+                }
+                verticalLockPending = false;
+            });
         });
     }
 
