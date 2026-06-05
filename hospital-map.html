@@ -80,15 +80,14 @@
         .btn-reset-route:active { transform: scale(0.96); }
 
         /* ===== КАРТА ===== */
-        .map-container {
-            flex: 1;
+        .map-wrapper {
+            flex: 0 0 auto; /* Ключевое изменение: не растягивается, занимает только нужное место */
             position: relative;
-            min-height: 0;
             background: #1a1a2e;
+            width: 100%;
         }
         .map-scroll-container {
             width: 100%;
-            height: 100%;
             overflow-x: auto;
             overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
@@ -213,7 +212,11 @@
             z-index: 1000;
         }
         .buildings-panel:not(.open) { height: 46px; }
-        .buildings-panel.open { height: min(55vh, 420px); }
+        .buildings-panel.open { 
+            height: min(55vh, 420px); 
+            flex: 1; /* Занимает всё оставшееся пространство */
+            min-height: 120px; /* Минимальная высота */
+        }
         .panel-header {
             padding: 10px 20px;
             display: flex;
@@ -301,7 +304,7 @@
     </div>
 </div>
 
-<div class="map-container" id="mapContainer">
+<div class="map-wrapper" id="mapWrapper">
     <div class="map-scroll-container" id="mapScrollContainer">
         <img id="mapImage" alt="Карта больницы">
         <canvas id="routeCanvas"></canvas>
@@ -417,7 +420,7 @@
     function initMap() {
         var cfg = appData.config;
         var img = document.getElementById('mapImage');
-        var container = document.getElementById('mapContainer');
+        var wrapper = document.getElementById('mapWrapper');
         scrollContainer = document.getElementById('mapScrollContainer');
         routeCanvasEl = document.getElementById('routeCanvas');
 
@@ -435,11 +438,10 @@
 
     // === НОВАЯ ЛОГИКА МАСШТАБИРОВАНИЯ ===
     function applyScale(isPanelOpen) {
-        var container = document.getElementById('mapContainer');
+        var wrapper = document.getElementById('mapWrapper');
         var img = document.getElementById('mapImage');
         
-        var containerWidth = container.clientWidth;
-        var containerHeight = container.clientHeight;
+        var wrapperWidth = wrapper.clientWidth;
         var naturalWidth = img.naturalWidth;
         var naturalHeight = img.naturalHeight;
         
@@ -447,19 +449,21 @@
         
         if (isPanelOpen) {
             // Панель ОТКРЫТА: масштабируем по ШИРИНЕ
-            scale = containerWidth / naturalWidth;
-            totalWidth = containerWidth;
+            scale = wrapperWidth / naturalWidth;
+            totalWidth = wrapperWidth;
             totalHeight = naturalHeight * scale;
         } else {
-            // Панель ЗАКРЫТА: масштабируем по ВЫСОТЕ
-            scale = containerHeight / naturalHeight;
+            // Панель ЗАКРЫТА: масштабируем по ВЫСОТЕ доступного пространства
+            var availableHeight = getAvailableHeight();
+            scale = availableHeight / naturalHeight;
             totalWidth = naturalWidth * scale;
-            totalHeight = containerHeight;
+            totalHeight = availableHeight;
         }
 
         mapSizes = { totalWidth: totalWidth, totalHeight: totalHeight };
 
-        // Применяем размеры к картинке
+        // Применяем размеры к контейнеру и картинке
+        wrapper.style.height = totalHeight + 'px';
         img.style.width = totalWidth + 'px';
         img.style.height = totalHeight + 'px';
 
@@ -477,6 +481,22 @@
             routeCtx = routeCanvasEl.getContext('2d');
             routeCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
+    }
+
+    function getAvailableHeight() {
+        var viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        var header = document.querySelector('.header');
+        var hintPanel = document.querySelector('.hint-panel');
+        var buildingsPanel = document.getElementById('buildingsPanel');
+        
+        var usedHeight = 0;
+        if (header) usedHeight += header.offsetHeight;
+        if (hintPanel) usedHeight += hintPanel.offsetHeight;
+        if (buildingsPanel && !buildingsPanel.classList.contains('open')) {
+            usedHeight += buildingsPanel.offsetHeight;
+        }
+        
+        return viewportHeight - usedHeight;
     }
 
     function repositionMarkers() {
@@ -698,14 +718,25 @@
     function setupPanelToggle() {
         var panel = document.getElementById('buildingsPanel');
         var header = document.getElementById('panelHeader');
+        
+        // Для плавной анимации пересчитываем размеры во время transition
+        let resizeObserver;
+        if (typeof ResizeObserver !== 'undefined') {
+            resizeObserver = new ResizeObserver(() => {
+                recalculateLayout();
+            });
+            resizeObserver.observe(panel);
+        }
+        
         header.addEventListener('click', function() {
             panel.classList.toggle('open');
-            // Даем браузеру время применить CSS-изменения, потом пересчитываем
-            setTimeout(recalculateLayout, 100);
-        });
-        panel.addEventListener('transitionend', function(e) {
-            if (e.propertyName === 'height' && e.target === panel) {
-                recalculateLayout();
+            // Для браузеров без ResizeObserver
+            if (!resizeObserver) {
+                const handleTransition = () => {
+                    recalculateLayout();
+                    panel.removeEventListener('transitionend', handleTransition);
+                };
+                panel.addEventListener('transitionend', handleTransition);
             }
         });
     }
@@ -724,19 +755,12 @@
 
     // === ПЕРЕРАСЧЁТ ПРИ ИЗМЕНЕНИИ РАЗМЕРА ОКНА ===
     function recalculateLayout() {
-        var container = document.getElementById('mapContainer');
         var img = document.getElementById('mapImage');
         var panel = document.getElementById('buildingsPanel');
         
-        if (!container || !img || !img.naturalWidth) return;
+        if (!img || !img.naturalWidth) return;
 
-        var containerHeight = container.clientHeight;
-        if (!containerHeight || containerHeight <= 0) return;
-
-        // Проверяем, открыта ли панель
         var isPanelOpen = panel.classList.contains('open');
-        
-        // Применяем масштаб в зависимости от состояния панели
         applyScale(isPanelOpen);
         repositionMarkers();
     }
@@ -745,7 +769,7 @@
         var resizeTimeout;
         function onResize() {
             clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(recalculateLayout, 100);
+            resizeTimeout = setTimeout(recalculateLayout, 50);
         }
         if (window.visualViewport) {
             window.visualViewport.addEventListener('resize', onResize);
@@ -764,7 +788,7 @@
             }
         });
         document.addEventListener('fullscreenchange', function() {
-            setTimeout(recalculateLayout, 150);
+            setTimeout(recalculateLayout, 100);
         });
     }
 
@@ -785,9 +809,9 @@
     }
 
     main().catch(function(err) {
-        var mapContainer = document.getElementById('mapContainer');
-        if (mapContainer) {
-            mapContainer.innerHTML =
+        var mapWrapper = document.getElementById('mapWrapper');
+        if (mapWrapper) {
+            mapWrapper.innerHTML =
                 '<div style="color:#fff;padding:40px;text-align:center;font-size:16px;">' +
                 'Ошибка загрузки: ' + escHtml(err.message) + '</div>';
         }
