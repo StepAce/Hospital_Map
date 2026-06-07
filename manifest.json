@@ -1,7 +1,7 @@
 {
-  "name": "Навигация больницы",
-  "short_name": "Навигация",
-  "description": "Навигационная карта инфекционной больницы",
+  "name": "Навигация ГБУЗ «Инфекционная больница №2»",
+  "short_name": "Навигация ИБ_№2",
+  "description": "Навигационная карта ГБУЗ «Инфекционная больница №2»",
   "start_url": "./hospital-map.html",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -13,13 +13,13 @@
       "src": "./icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "./icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }
