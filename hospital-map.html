@@ -32,9 +32,8 @@
             justify-content: space-between;
             gap: 12px;
             padding: 10px 16px;
-            background: rgba(255,255,255,0.96);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(0,0,0,0.1);
+            background: #ffffff;
+            border-bottom: 1px solid #e0e0e0;
             flex-shrink: 0;
             z-index: 1000;
             font-family: 'Inter', sans-serif;
@@ -84,6 +83,7 @@
             white-space: nowrap;
             flex-shrink: 0;
             font-family: 'Inter', sans-serif;
+            display: none;
         }
         .btn-install:active { transform: scale(0.96); }
         .btn-reset-route {
@@ -108,7 +108,6 @@
             .btn-install { padding: 6px 12px; font-size: 11px; }
             .header { padding: 8px 12px; }
         }
-        .btn-reset-route:active { transform: scale(0.96); }
 
         /* ===== КАРТА ===== */
         .map-wrapper {
@@ -245,9 +244,8 @@
 
         /* ===== ПАНЕЛЬ КОРПУСОВ ===== */
         .buildings-panel {
-            background: rgba(255, 255, 255, 0.96);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            background: #ffffff;
+            border-top: 1px solid #e0e0e0;
             flex-shrink: 0;
             overflow: hidden;
             z-index: 1000;
@@ -265,7 +263,7 @@
             font-weight: 700;
             font-size: 16px;
             color: #1a1a2e;
-            border-bottom: 1px solid #ccc;
+            border-bottom: 1px solid #e0e0e0;
             flex-shrink: 0;
             min-height: 46px;
             user-select: none;
@@ -286,7 +284,7 @@
             display: flex; align-items: center; gap: 14px;
             padding: 12px 20px;
             cursor: pointer;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #e0e0e0;
             min-height: 52px;
             -webkit-tap-highlight-color: transparent;
             user-select: none;
@@ -313,7 +311,7 @@
 
         /* ===== ПАНЕЛЬ ПОДСКАЗКИ ===== */
         .hint-panel {
-            background: #F8F9FA;
+            background: #ffffff;
             flex-shrink: 0;
             z-index: 1000;
         }
@@ -426,6 +424,7 @@
     'use strict';
 
     // === СОСТОЯНИЕ ===
+    var deferredPrompt = null;
     var appData = null;
     var scale = 1;
     var allNodes = {};
@@ -999,6 +998,22 @@ function setupPanelToggle() {
         document.getElementById('btnResetRoute').addEventListener('click', clearRoute);
         document.getElementById('btnCloseRoute').addEventListener('click', clearRoute);
     }
+
+    window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        var btn = document.getElementById('installBtn');
+        if (btn) btn.style.display = 'flex';
+    });
+
+    document.getElementById('installBtn').addEventListener('click', function() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(function() { deferredPrompt = null; });
+        } else {
+            alert('📲 Добавление через меню браузера:\n\nAndroid (Chrome): ⋮ → «Установить приложение»\n\niPhone (Safari): ⬆️ → «На экран «Домой»');
+        }
+    });
 
     main().catch(function(err) {
         var mapWrapper = document.getElementById('mapWrapper');
