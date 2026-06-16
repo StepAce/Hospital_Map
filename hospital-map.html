@@ -31,7 +31,7 @@
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            padding: 10px 16px;
+            padding: 8px 12px;
             background: #ffffff;
             border-bottom: 1px solid #e0e0e0;
             flex-shrink: 0;
@@ -46,7 +46,7 @@
             min-width: 0;
         }
         .header-logo {
-            height: 40px;
+            height: 48px;
             width: auto;
             border-radius: 10px;
         }
@@ -59,10 +59,8 @@
             font-size: 16px;
             font-weight: 700;
             color: #1a1a2e;
-            line-height: 1.3;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            line-height: 1.2;
+            white-space: normal;
             font-family: 'Inter', sans-serif;
         }
         .subtitle {
@@ -83,7 +81,6 @@
             white-space: nowrap;
             flex-shrink: 0;
             font-family: 'Inter', sans-serif;
-            display: none;
         }
         .btn-install:active { transform: scale(0.96); }
         .btn-reset-route {
@@ -102,11 +99,11 @@
         }
         .btn-reset-route.show { display: inline-block; }
         @media (max-width: 600px) {
-            .header-logo { height: 32px; }
+            .header-logo { height: 40px; }
             .hospital-name { font-size: 14px; }
             .subtitle { font-size: 10px; }
             .btn-install { padding: 6px 12px; font-size: 11px; }
-            .header { padding: 8px 12px; }
+            .header { padding: 6px 10px; }
         }
 
         /* ===== КАРТА ===== */
@@ -144,44 +141,6 @@
             pointer-events: none;
         }
 
-        /* Кастомные маркеры */
-        .building-marker {
-            position: absolute;
-            width: 36px; height: 36px;
-            border-radius: 8px;
-            background: #D7CCC8;
-            border: 2px solid #8D6E63;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 16px;
-            color: #5D4037;
-            box-shadow: 2px 2px 6px rgba(0,0,0,0.25);
-            cursor: pointer;
-            transform: translate(-50%, -50%);
-            font-family: 'Inter', sans-serif;
-        }
-        .building-marker.selected {
-            box-shadow: 0 0 0 5px rgba(21,101,192,0.55);
-            border-color: #1565C0;
-        }
-        .callout-marker {
-            position: absolute;
-            width: 14px; height: 14px;
-            border-radius: 50%;
-            background: rgba(21,101,192,0.5);
-            border: 1.5px solid rgba(21,101,192,0.75);
-            cursor: pointer;
-            transform: translate(-50%, -50%);
-            font-family: 'Inter', sans-serif;
-        }
-        @media (min-width: 1024px) {
-            .callout-marker {
-                width: 22px; height: 22px;
-                border: 2px solid #ffffff;
-            }
-        }
         .start-marker {
             position: absolute;
             width: 32px; height: 32px;
@@ -272,9 +231,11 @@
         }
         .panel-arrow {
             font-size: 20px;
-            transition: transform 0.4s ease;
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .buildings-panel.open .panel-arrow { transform: rotate(180deg); }
+        .panel-arrow.open {
+            transform: rotate(180deg);
+        }
         .buildings-list {
             height: calc(100% - 46px);
             overflow-y: auto;
@@ -331,14 +292,14 @@
             50% { transform: translateY(5px); }
         }
 
-        /* ===== ТЕСТОВАЯ ВЫНОСКА ===== */
+        /* ===== ВЫНОСКИ ===== */
         .callout {
             position: absolute;
             display: flex;
             flex-direction: column;
             align-items: center;
             z-index: 100;
-            transform: translateX(-50%);
+            pointer-events: none;
         }
         .callout-label {
             background: rgba(125, 122, 255, 1);
@@ -357,20 +318,35 @@
             justify-content: center;
             line-height: 1;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            flex-shrink: 0;
         }
         .callout-line {
             width: 3px;
-            height: 135px;
+            flex: 1;
+            min-height: 4px;
             background: #ffffff;
-            margin-top: -3px;
         }
         .callout-dot {
-            width: 14px;
-            height: 14px;
-            background: #ffffff;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            margin-top: -7px;
-            box-shadow: 0 0 0 2px rgba(125, 122, 255, 0.5);
+            background: #D7CCC8;
+            border: 2px solid #8D6E63;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: #5D4037;
+            box-shadow: 2px 2px 6px rgba(0,0,0,0.25);
+            cursor: pointer;
+            flex-shrink: 0;
+            font-family: 'Inter', sans-serif;
+            pointer-events: auto;
+        }
+        .callout-dot.selected {
+            box-shadow: 0 0 0 5px rgba(21,101,192,0.55);
+            border-color: #1565C0;
         }
     </style>
 </head>
@@ -380,7 +356,7 @@
     <div class="header-left">
         <img src="icon-192.png" alt="Логотип" class="header-logo">
         <div class="header-text">
-            <div class="hospital-name">Инфекционная больница</div>
+            <div class="hospital-name">ГБУЗ "Инфекционная больница №2"</div>
             <div class="subtitle">Навигационная карта</div>
         </div>
     </div>
@@ -393,11 +369,6 @@
         <img id="mapImage" alt="Карта больницы">
         <canvas id="routeCanvas"></canvas>
         <div id="markersLayer"></div>
-        <div class="callout" id="testCallout" style="left: 931px; top: 300px;">
-            <div class="callout-label">Диагностика</div>
-            <div class="callout-line"></div>
-            <div class="callout-dot"></div>
-        </div>
     </div>
     <div class="route-panel" id="routePanel">
         <span class="route-info" id="routeInfo"></span>
@@ -586,25 +557,7 @@
     }
 
     function repositionMarkers() {
-        Object.keys(buildingMarkerEls).forEach(function(bid) {
-            var b = findBuildingById(parseInt(bid));
-            if (b) {
-                var el = buildingMarkerEls[bid];
-                el.style.left = (b.x * scale) + 'px';
-                el.style.top = (b.y * scale) + 'px';
-            }
-        });
-        
         var markersLayer = document.getElementById('markersLayer');
-        var callouts = markersLayer.querySelectorAll('.callout-marker');
-        callouts.forEach(function(cel, index) {
-            if (appData.buildings[index] && appData.buildings[index].callout) {
-                var callout = appData.buildings[index].callout;
-                cel.style.left = (callout.x * scale) + 'px';
-                cel.style.top = (callout.y * scale) + 'px';
-            }
-        });
-        
         var startMarker = markersLayer.querySelector('.start-marker');
         if (startMarker) {
             var sp = appData.startPoints.find(function(p) { return p.id === startKey; });
@@ -615,15 +568,21 @@
         }
         
         redrawCurrentRoute();
-        positionTestCallout();
+        repositionCallouts();
     }
 
-    function positionTestCallout() {
-        var el = document.getElementById('testCallout');
-        if (el) {
-            el.style.left = (931 * scale) + 'px';
-            el.style.top = (300 * scale) + 'px';
-        }
+    function repositionCallouts() {
+        Object.keys(buildingMarkerEls).forEach(function(bid) {
+            var b = findBuildingById(parseInt(bid));
+            if (!b || !b.callout) return;
+            var dot = buildingMarkerEls[bid];
+            var container = dot.parentElement;
+            var h = (b.y - b.callout.y) * scale + 18;
+            container.style.left = (b.x * scale) + 'px';
+            container.style.top = (b.y * scale) + 'px';
+            container.style.height = h + 'px';
+            container.style.transform = 'translate(-50%, calc(-100% + 18px))';
+        });
     }
 
     function findBuildingById(id) {
@@ -633,28 +592,6 @@
     // === ОТРИСОВКА МАРКЕРОВ ===
     function renderMarkers() {
         var markersLayer = document.getElementById('markersLayer');
-        markersLayer.innerHTML = '';
-
-        appData.buildings.forEach(function(b) {
-            var el = document.createElement('div');
-            el.className = 'building-marker';
-            el.textContent = b.id;
-            el.style.left = (b.x * scale) + 'px';
-            el.style.top = (b.y * scale) + 'px';
-            el.addEventListener('click', function() { setRoute(b.id); });
-            markersLayer.appendChild(el);
-            buildingMarkerEls[b.id] = el;
-
-            if (b.callout) {
-                var cel = document.createElement('div');
-                cel.className = 'callout-marker';
-                cel.style.left = (b.callout.x * scale) + 'px';
-                cel.style.top = (b.callout.y * scale) + 'px';
-                cel.addEventListener('click', function() { setRoute(b.id); });
-                markersLayer.appendChild(cel);
-            }
-        });
-
         appData.startPoints.forEach(function(sp) {
             if (sp.id === startKey) {
                 var sel = document.createElement('div');
@@ -664,6 +601,29 @@
                 sel.style.top = (sp.y * scale) + 'px';
                 markersLayer.appendChild(sel);
             }
+        });
+    }
+
+    function renderCallouts() {
+        var layer = document.getElementById('markersLayer');
+        buildingMarkerEls = {};
+        appData.buildings.forEach(function(b) {
+            if (!b.callout) return;
+            var container = document.createElement('div');
+            container.className = 'callout';
+            var h = (b.y - b.callout.y) * scale + 18;
+            container.style.left = (b.x * scale) + 'px';
+            container.style.top = (b.y * scale) + 'px';
+            container.style.height = h + 'px';
+            container.style.transform = 'translate(-50%, calc(-100% + 18px))';
+            container.innerHTML =
+                '<div class="callout-label">' + escHtml(b.name) + '</div>' +
+                '<div class="callout-line"></div>' +
+                '<div class="callout-dot">' + b.id + '</div>';
+            var dot = container.querySelector('.callout-dot');
+            dot.addEventListener('click', function() { setRoute(b.id); });
+            layer.appendChild(container);
+            buildingMarkerEls[b.id] = dot;
         });
     }
 
@@ -811,9 +771,10 @@
 function setupPanelToggle() {
     var panel = document.getElementById('buildingsPanel');
     var header = document.getElementById('panelHeader');
+    var arrow = document.getElementById('panelArrow');
     
-    var ANIMATION_DURATION = 400;
-    var TRANSITION_DURATION = 150; // Длительность плавного перехода между режимами
+    var ANIMATION_DURATION = 300;
+    var TRANSITION_DURATION = 300; // Длительность плавного перехода между режимами
     var animationId = null;
     var isPanelOpen = false;
     
@@ -859,7 +820,7 @@ function setupPanelToggle() {
             // Во время анимации всегда масштабируем по высоте
             applyScale(false);
             repositionMarkers();
-            
+
             if (progress < 1) {
                 animationId = requestAnimationFrame(step);
             } else {
@@ -933,16 +894,18 @@ function setupPanelToggle() {
     
     header.addEventListener('click', function() {
         isPanelOpen = !isPanelOpen;
-        
+
         var currentHeight = panel.offsetHeight;
         var targetHeight = getTargetHeight(isPanelOpen);
-        
+
         if (isPanelOpen) {
             panel.classList.add('open');
+            arrow.classList.add('open');
         } else {
             panel.classList.remove('open');
+            arrow.classList.remove('open');
         }
-        
+
         animatePanelHeight(currentHeight, targetHeight, isPanelOpen);
     });
 }
@@ -990,7 +953,7 @@ function setupPanelToggle() {
         await initMap();
         handleQRParam();
         renderMarkers();
-        positionTestCallout();
+        renderCallouts();
         renderBuildingsList();
         setupPanelToggle();
         setupResizeHandler();
@@ -1002,16 +965,16 @@ function setupPanelToggle() {
     window.addEventListener('beforeinstallprompt', function(e) {
         e.preventDefault();
         deferredPrompt = e;
-        var btn = document.getElementById('installBtn');
-        if (btn) btn.style.display = 'flex';
     });
 
     document.getElementById('installBtn').addEventListener('click', function() {
         if (deferredPrompt) {
             deferredPrompt.prompt();
             deferredPrompt.userChoice.then(function() { deferredPrompt = null; });
+        } else if (window.matchMedia('(display-mode: standalone)').matches) {
+            alert('✅ Приложение уже установлено. Оно на рабочем столе телефона.');
         } else {
-            alert('📲 Добавление через меню браузера:\n\nAndroid (Chrome): ⋮ → «Установить приложение»\n\niPhone (Safari): ⬆️ → «На экран «Домой»');
+            alert('📲 Как добавить:\n\nAndroid (Chrome): ⋮ → «Установить приложение»\n\niPhone (Safari): ⬆️ → «На экран «Домой»');
         }
     });
 
