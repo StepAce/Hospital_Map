@@ -135,22 +135,17 @@
             pointer-events: none;
         }
         #markersLayer > * { pointer-events: auto; }
-        #routeCanvas {
-            position: absolute;
-            top: 0; left: 0;
-            pointer-events: none;
-        }
 
         .start-marker {
             position: absolute;
-            width: 32px; height: 32px;
+            width: clamp(26px, 4vw, 42px); height: clamp(26px, 4vw, 42px);
             border-radius: 50%;
             background: #2E7D32;
             border: 3px solid white;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: clamp(14px, 2.5vw, 24px);
             box-shadow: 0 0 0 rgba(46,125,50,0.7);
             animation: pulse 1.5s infinite;
             transform: translate(-50%, -50%);
@@ -160,6 +155,23 @@
             0% { box-shadow: 0 0 0 0 rgba(46,125,50,0.7); }
             70% { box-shadow: 0 0 0 16px rgba(46,125,50,0); }
             100% { box-shadow: 0 0 0 0 rgba(46,125,50,0); }
+        }
+
+        .building-marker {
+            position: absolute;
+            width: clamp(30px, 4.5vw, 48px); height: clamp(30px, 4.5vw, 48px);
+            border-radius: 50%;
+            background: #D7CCC8;
+            border: 3px solid #8D6E63;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: clamp(14px, 2.5vw, 24px);
+            color: #5D4037;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transform: translate(-50%, -50%);
         }
 
         /* ===== ПАНЕЛЬ МАРШРУТА (плавающая) ===== */
@@ -210,9 +222,7 @@
             z-index: 1000;
             height: 46px;
         }
-        .buildings-panel.open {
-            flex: 1; /* Занимает всё оставшееся пространство */
-        }
+        
         .panel-header {
             padding: 10px 20px;
             display: flex;
@@ -292,62 +302,6 @@
             50% { transform: translateY(5px); }
         }
 
-        /* ===== ВЫНОСКИ ===== */
-        .callout {
-            position: absolute;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            z-index: 100;
-            pointer-events: none;
-        }
-        .callout-label {
-            background: rgba(125, 122, 255, 1);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            color: #ffffff;
-            font-family: 'Inter', sans-serif;
-            font-size: 16px;
-            font-weight: 600;
-            padding: 10px 20px 12px 20px;
-            border-radius: 30px;
-            white-space: nowrap;
-            border: 3px solid #ffffff;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            line-height: 1;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            flex-shrink: 0;
-        }
-        .callout-line {
-            width: 3px;
-            flex: 1;
-            min-height: 4px;
-            background: #ffffff;
-        }
-        .callout-dot {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: #D7CCC8;
-            border: 2px solid #8D6E63;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 18px;
-            color: #5D4037;
-            box-shadow: 2px 2px 6px rgba(0,0,0,0.25);
-            cursor: pointer;
-            flex-shrink: 0;
-            font-family: 'Inter', sans-serif;
-            pointer-events: auto;
-        }
-        .callout-dot.selected {
-            box-shadow: 0 0 0 5px rgba(21,101,192,0.55);
-            border-color: #1565C0;
-        }
     </style>
 </head>
 <body>
@@ -367,7 +321,6 @@
 <div class="map-wrapper" id="mapWrapper">
     <div class="map-scroll-container" id="mapScrollContainer">
         <img id="mapImage" alt="Карта больницы">
-        <canvas id="routeCanvas"></canvas>
         <div id="markersLayer"></div>
     </div>
     <div class="route-panel" id="routePanel">
@@ -404,8 +357,6 @@
     var selectedBuildingId = null;
     var buildingMarkerEls = {};
     var metersPerPixel = 0.25;
-    var routeCanvasEl = null;
-    var routeCtx = null;
     var scrollContainer = null;
     var mapSizes = null;
 
@@ -483,7 +434,6 @@
         var img = document.getElementById('mapImage');
         var wrapper = document.getElementById('mapWrapper');
         scrollContainer = document.getElementById('mapScrollContainer');
-        routeCanvasEl = document.getElementById('routeCanvas');
 
         return new Promise(function(resolve, reject) {
             img.onload = function() {
@@ -506,6 +456,9 @@
         var naturalWidth = img.naturalWidth;
         var naturalHeight = img.naturalHeight;
         
+        var sp = allNodes[startKey];
+        var anchorX = sp ? sp.x * scale : 0;
+
         var totalWidth, totalHeight;
         
         if (forceWidthMode) {
@@ -529,14 +482,8 @@
         markersLayer.style.width = totalWidth + 'px';
         markersLayer.style.height = totalHeight + 'px';
 
-        if (routeCanvasEl) {
-            var dpr = window.devicePixelRatio || 1;
-            routeCanvasEl.width = totalWidth * dpr;
-            routeCanvasEl.height = totalHeight * dpr;
-            routeCanvasEl.style.width = totalWidth + 'px';
-            routeCanvasEl.style.height = totalHeight + 'px';
-            routeCtx = routeCanvasEl.getContext('2d');
-            routeCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (scrollContainer) {
+            scrollContainer.scrollLeft = Math.max(0, sp.x * scale - scrollContainer.clientWidth / 2);
         }
     }
 
@@ -566,22 +513,12 @@
                 startMarker.style.top = (sp.y * scale) + 'px';
             }
         }
-        
-        redrawCurrentRoute();
-        repositionCallouts();
-    }
-
-    function repositionCallouts() {
         Object.keys(buildingMarkerEls).forEach(function(bid) {
             var b = findBuildingById(parseInt(bid));
-            if (!b || !b.callout) return;
+            if (!b) return;
             var dot = buildingMarkerEls[bid];
-            var container = dot.parentElement;
-            var h = (b.y - b.callout.y) * scale + 18;
-            container.style.left = (b.x * scale) + 'px';
-            container.style.top = (b.y * scale) + 'px';
-            container.style.height = h + 'px';
-            container.style.transform = 'translate(-50%, calc(-100% + 18px))';
+            dot.style.left = (b.x * scale) + 'px';
+            dot.style.top = (b.y * scale) + 'px';
         });
     }
 
@@ -604,25 +541,17 @@
         });
     }
 
-    function renderCallouts() {
+    function renderBuildingMarkers() {
         var layer = document.getElementById('markersLayer');
         buildingMarkerEls = {};
         appData.buildings.forEach(function(b) {
-            if (!b.callout) return;
-            var container = document.createElement('div');
-            container.className = 'callout';
-            var h = (b.y - b.callout.y) * scale + 18;
-            container.style.left = (b.x * scale) + 'px';
-            container.style.top = (b.y * scale) + 'px';
-            container.style.height = h + 'px';
-            container.style.transform = 'translate(-50%, calc(-100% + 18px))';
-            container.innerHTML =
-                '<div class="callout-label">' + escHtml(b.name) + '</div>' +
-                '<div class="callout-line"></div>' +
-                '<div class="callout-dot">' + b.id + '</div>';
-            var dot = container.querySelector('.callout-dot');
+            var dot = document.createElement('div');
+            dot.className = 'building-marker';
+            dot.textContent = b.id;
+            dot.style.left = (b.x * scale) + 'px';
+            dot.style.top = (b.y * scale) + 'px';
             dot.addEventListener('click', function() { setRoute(b.id); });
-            layer.appendChild(container);
+            layer.appendChild(dot);
             buildingMarkerEls[b.id] = dot;
         });
     }
@@ -637,47 +566,12 @@
         var result = findPath(startKey, toKey);
         if (!result) return;
 
-        clearRouteCanvas();
-        drawRoute(result.nodes);
         lastRouteNodeIds = result.nodes;
 
         selectedBuildingId = buildingId;
-        updateBuildingMarkerSelection();
         updateRoutePanel(buildingId, result.distance);
         updateBuildingsListSelection();
         scrollToRoute(result.nodes);
-    }
-
-    function clearRouteCanvas() {
-        if (routeCtx && routeCanvasEl) {
-            routeCtx.clearRect(0, 0, routeCanvasEl.width / (window.devicePixelRatio || 1), routeCanvasEl.height / (window.devicePixelRatio || 1));
-        }
-        lastRouteNodeIds = null;
-    }
-
-    function drawRoute(nodeIds) {
-        if (!routeCtx) return;
-        routeCtx.beginPath();
-        routeCtx.strokeStyle = '#42A5F5';
-        routeCtx.lineWidth = 5;
-        routeCtx.lineJoin = 'round';
-        routeCtx.lineCap = 'round';
-        routeCtx.setLineDash([10, 8]);
-
-        var first = allNodes[nodeIds[0]];
-        routeCtx.moveTo(first.x * scale, first.y * scale);
-        for (var i = 1; i < nodeIds.length; i++) {
-            var n = allNodes[nodeIds[i]];
-            routeCtx.lineTo(n.x * scale, n.y * scale);
-        }
-        routeCtx.stroke();
-    }
-
-    function redrawCurrentRoute() {
-        if (lastRouteNodeIds && lastRouteNodeIds.length) {
-            clearRouteCanvas();
-            drawRoute(lastRouteNodeIds);
-        }
     }
 
     function scrollToRoute(nodeIds) {
@@ -695,23 +589,12 @@
     }
 
     function clearRoute() {
-        clearRouteCanvas();
         selectedBuildingId = null;
-        updateBuildingMarkerSelection();
         updateRoutePanel(null, 0);
         updateBuildingsListSelection();
         if (scrollContainer) {
             scrollContainer.scrollTo({ left: 0, behavior: 'smooth' });
         }
-    }
-
-    function updateBuildingMarkerSelection() {
-        Object.keys(buildingMarkerEls).forEach(function(bid) {
-            var bId = parseInt(bid);
-            var el = buildingMarkerEls[bid];
-            if (bId === selectedBuildingId) el.classList.add('selected');
-            else el.classList.remove('selected');
-        });
     }
 
     // === ПАНЕЛЬ ИНФОРМАЦИИ О МАРШРУТЕ ===
@@ -774,7 +657,6 @@ function setupPanelToggle() {
     var arrow = document.getElementById('panelArrow');
     
     var ANIMATION_DURATION = 300;
-    var TRANSITION_DURATION = 300; // Длительность плавного перехода между режимами
     var animationId = null;
     var isPanelOpen = false;
     
@@ -818,78 +700,36 @@ function setupPanelToggle() {
             panel.style.height = currentHeight + 'px';
             
             // Во время анимации всегда масштабируем по высоте
+            if (targetOpen && scrollContainer) {
+                var savedCenter = (scrollContainer.scrollLeft + scrollContainer.clientWidth / 2) / (scale || 1);
+            }
             applyScale(false);
             repositionMarkers();
+            if (targetOpen && scrollContainer) {
+                scrollContainer.scrollLeft = Math.max(0, savedCenter * scale - scrollContainer.clientWidth / 2);
+            }
 
             if (progress < 1) {
                 animationId = requestAnimationFrame(step);
             } else {
                 animationId = null;
-                // После завершения анимации открытия — плавный переход на режим "по ширине"
                 if (targetOpen) {
-                    smoothTransitionToWidthMode();
+                    if (scrollContainer) {
+                        var savedCenter = (scrollContainer.scrollLeft + scrollContainer.clientWidth / 2) / (scale || 1);
+                    }
+                    applyScale(true);
+                    repositionMarkers();
+                    if (scrollContainer) {
+                        scrollContainer.scrollLeft = Math.max(0, savedCenter * scale - scrollContainer.clientWidth / 2);
+                    }
+                } else {
+                    applyScale(false);
+                    repositionMarkers();
                 }
             }
         }
         
         animationId = requestAnimationFrame(step);
-    }
-    
-    // Плавный переход от режима "по высоте" к режиму "по ширине"
-    function smoothTransitionToWidthMode() {
-        var img = document.getElementById('mapImage');
-        var wrapper = document.getElementById('mapWrapper');
-        
-        // Запоминаем текущие размеры (режим "по высоте")
-        var startWidth = img.offsetWidth;
-        var startHeight = img.offsetHeight;
-        
-        // Вычисляем целевые размеры (режим "по ширине")
-        var wrapperWidth = wrapper.clientWidth;
-        var targetWidth = wrapperWidth;
-        var targetHeight = (img.naturalHeight * wrapperWidth) / img.naturalWidth;
-        
-        var startTime = null;
-        
-        function step(timestamp) {
-            if (!startTime) startTime = timestamp;
-            var elapsed = timestamp - startTime;
-            var progress = Math.min(elapsed / TRANSITION_DURATION, 1);
-            var easedProgress = easeInOutCubic(progress);
-            
-            var currentWidth = startWidth + (targetWidth - startWidth) * easedProgress;
-            var currentHeight = startHeight + (targetHeight - startHeight) * easedProgress;
-            
-            // Применяем промежуточные размеры
-            scale = currentWidth / img.naturalWidth;
-            mapSizes = { totalWidth: currentWidth, totalHeight: currentHeight };
-            
-            wrapper.style.height = currentHeight + 'px';
-            img.style.width = currentWidth + 'px';
-            img.style.height = currentHeight + 'px';
-            
-            var markersLayer = document.getElementById('markersLayer');
-            markersLayer.style.width = currentWidth + 'px';
-            markersLayer.style.height = currentHeight + 'px';
-            
-            if (routeCanvasEl) {
-                var dpr = window.devicePixelRatio || 1;
-                routeCanvasEl.width = currentWidth * dpr;
-                routeCanvasEl.height = currentHeight * dpr;
-                routeCanvasEl.style.width = currentWidth + 'px';
-                routeCanvasEl.style.height = currentHeight + 'px';
-                routeCtx = routeCanvasEl.getContext('2d');
-                routeCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            }
-            
-            repositionMarkers();
-            
-            if (progress < 1) {
-                requestAnimationFrame(step);
-            }
-        }
-        
-        requestAnimationFrame(step);
     }
     
     header.addEventListener('click', function() {
@@ -946,14 +786,25 @@ function setupPanelToggle() {
         window.addEventListener('resize', onResize);
     }
 
+    // === ЦЕНТРИРОВАНИЕ ПО ТОЧКЕ СТАРТА ===
+    function centerOnStartPoint() {
+        if (!scrollContainer || !mapSizes) return;
+        var node = allNodes[startKey];
+        if (!node) return;
+        var centerX = node.x * scale;
+        var halfView = scrollContainer.getBoundingClientRect().width / 2;
+        scrollContainer.scrollLeft = Math.max(0, centerX - halfView);
+    }
+
     // === ЗАПУСК ===
     async function main() {
         await loadData();
         buildGraph();
         await initMap();
         handleQRParam();
+        centerOnStartPoint();
         renderMarkers();
-        renderCallouts();
+        renderBuildingMarkers();
         renderBuildingsList();
         setupPanelToggle();
         setupResizeHandler();
