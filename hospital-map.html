@@ -136,25 +136,61 @@
         }
         #markersLayer > * { pointer-events: auto; }
 
-        .start-marker {
+        .pin-container {
             position: absolute;
-            width: clamp(26px, 4vw, 42px); height: clamp(26px, 4vw, 42px);
-            border-radius: 50%;
-            background: #2E7D32;
-            border: 3px solid white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: clamp(14px, 2.5vw, 24px);
-            box-shadow: 0 0 0 rgba(46,125,50,0.7);
-            animation: pulse 1.5s infinite;
-            transform: translate(-50%, -50%);
-            font-family: 'Inter', sans-serif;
+            width: clamp(30px, 5vw, 48px);
+            height: clamp(40px, 6.67vw, 64px);
+            transform: translate(-50%, -100%);
         }
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(46,125,50,0.7); }
-            70% { box-shadow: 0 0 0 16px rgba(46,125,50,0); }
-            100% { box-shadow: 0 0 0 0 rgba(46,125,50,0); }
+        .pin {
+            position: absolute;
+            bottom: +5px;
+            left: 50%;
+            width: 83.333%;
+            height: 85%;
+            transform: translateX(-50%);
+            animation: pin-bounce 2s ease-in-out infinite;
+            z-index: 3;
+        }
+        .pin svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 6px 10px rgba(0,0,0,0.3));
+        }
+        .pin-ellipse {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 50%;
+            height: 12.5%;
+            transform: translate(-50%, 50%);
+            border-radius: 50%;
+            border: 2px solid #E53935;
+            background: transparent;
+            z-index: 2;
+        }
+        .pin-ellipse svg {
+            display: none;
+        }
+        .pulse {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 50%;
+            height: 12.5%;
+            transform: translate(-50%, 50%);
+            border-radius: 50%;
+            background: rgba(229, 57, 53, 0.4);
+            animation: pin-pulse 2s ease-in-out infinite;
+            z-index: 1;
+        }
+        @keyframes pin-bounce {
+            0%, 100% { transform: translateX(-50%) translateY(-5px); }
+            50% { transform: translateX(-50%) translateY(5px); }
+        }
+        @keyframes pin-pulse {
+            0%, 100% { transform: translate(-50%, 50%) scale(1); opacity: 0; }
+            50% { transform: translate(-50%, 50%) scale(4); opacity: 0.6; }
         }
 
         .building-marker {
@@ -356,6 +392,7 @@
     var startKey = 'qr_gate';
     var selectedBuildingId = null;
     var buildingMarkerEls = {};
+    var startPinEl = null;
     var metersPerPixel = 0.25;
     var scrollContainer = null;
     var mapSizes = null;
@@ -504,13 +541,11 @@
     }
 
     function repositionMarkers() {
-        var markersLayer = document.getElementById('markersLayer');
-        var startMarker = markersLayer.querySelector('.start-marker');
-        if (startMarker) {
+        if (startPinEl) {
             var sp = appData.startPoints.find(function(p) { return p.id === startKey; });
             if (sp) {
-                startMarker.style.left = (sp.x * scale) + 'px';
-                startMarker.style.top = (sp.y * scale) + 'px';
+                startPinEl.style.left = (sp.x * scale) + 'px';
+                startPinEl.style.top = (sp.y * scale) + 'px';
             }
         }
         Object.keys(buildingMarkerEls).forEach(function(bid) {
@@ -531,12 +566,27 @@
         var markersLayer = document.getElementById('markersLayer');
         appData.startPoints.forEach(function(sp) {
             if (sp.id === startKey) {
-                var sel = document.createElement('div');
-                sel.className = 'start-marker';
-                sel.textContent = '📍';
-                sel.style.left = (sp.x * scale) + 'px';
-                sel.style.top = (sp.y * scale) + 'px';
-                markersLayer.appendChild(sel);
+                var container = document.createElement('div');
+                container.className = 'pin-container';
+                container.style.left = (sp.x * scale) + 'px';
+                container.style.top = (sp.y * scale) + 'px';
+
+                var pulse = document.createElement('div');
+                pulse.className = 'pulse';
+                container.appendChild(pulse);
+
+                var ellipseWrap = document.createElement('div');
+                ellipseWrap.className = 'pin-ellipse';
+                ellipseWrap.innerHTML = '<svg viewBox="0 0 30 10" xmlns="http://www.w3.org/2000/svg"><ellipse cx="15" cy="5" rx="13" ry="4" stroke="#E53935" stroke-width="2" fill="none"/></svg>';
+                container.appendChild(ellipseWrap);
+
+                var pinWrap = document.createElement('div');
+                pinWrap.className = 'pin';
+                pinWrap.innerHTML = '<svg viewBox="0 0 50 68" xmlns="http://www.w3.org/2000/svg"><defs><mask id="hole"><rect width="50" height="68" fill="white"/><circle cx="25" cy="25" r="8" fill="black"/></mask></defs><path d="M25 2 C12 2 2 12 2 25 C2 40 25 66 25 66 C25 66 48 40 48 25 C48 12 38 2 25 2 Z" fill="#E53935" stroke="white" stroke-width="3" stroke-linejoin="round" mask="url(#hole)"/><circle cx="25" cy="25" r="9" fill="none" stroke="white" stroke-width="2"/></svg>';
+                container.appendChild(pinWrap);
+
+                markersLayer.appendChild(container);
+                startPinEl = container;
             }
         });
     }
