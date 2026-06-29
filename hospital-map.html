@@ -70,10 +70,10 @@
             font-family: 'Inter', sans-serif;
         }
         .btn-install {
-            background: #2E7D32;
-            color: white;
-            border: none;
-            padding: 8px 16px;
+            background: #ffffff;
+            color: #1a1a2e;
+            border: 1px solid #1a1a2e;
+            padding: 6px 14px;
             border-radius: 30px;
             font-size: 13px;
             font-weight: 600;
@@ -81,23 +81,11 @@
             white-space: nowrap;
             flex-shrink: 0;
             font-family: 'Inter', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
         .btn-install:active { transform: scale(0.96); }
-        .btn-reset-route {
-            background: #EF5350; color: white;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 20px;
-            font-size: clamp(12px, 3vw, 14px);
-            font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-            flex-shrink: 0;
-            display: none;
-            min-height: 40px; min-width: 48px;
-            font-family: 'Inter', sans-serif;
-        }
-        .btn-reset-route.show { display: inline-block; }
         @media (max-width: 600px) {
             .header-logo { height: 40px; }
             .hospital-name { font-size: 14px; }
@@ -144,7 +132,7 @@
         }
         .pin {
             position: absolute;
-            bottom: +5px;
+            bottom: 0;
             left: 50%;
             width: 83.333%;
             height: 85%;
@@ -155,44 +143,11 @@
         .pin svg {
             width: 100%;
             height: 100%;
-            filter: drop-shadow(0 6px 10px rgba(0,0,0,0.3));
-        }
-        .pin-ellipse {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            width: 50%;
-            height: 12.5%;
-            transform: translate(-50%, 50%);
-            border-radius: 50%;
-            border: 2px solid #E53935;
-            background: transparent;
-            z-index: 2;
-        }
-        .pin-ellipse svg {
-            display: none;
-        }
-        .pulse {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            width: 50%;
-            height: 12.5%;
-            transform: translate(-50%, 50%);
-            border-radius: 50%;
-            background: rgba(229, 57, 53, 0.4);
-            animation: pin-pulse 2s ease-in-out infinite;
-            z-index: 1;
         }
         @keyframes pin-bounce {
-            0%, 100% { transform: translateX(-50%) translateY(-5px); }
-            50% { transform: translateX(-50%) translateY(5px); }
+            0%, 100% { transform: translateX(-50%) translateY(-10px); }
+            50% { transform: translateX(-50%) translateY(0px); }
         }
-        @keyframes pin-pulse {
-            0%, 100% { transform: translate(-50%, 50%) scale(1); opacity: 0; }
-            50% { transform: translate(-50%, 50%) scale(4); opacity: 0.6; }
-        }
-
         .building-marker {
             position: absolute;
             width: clamp(30px, 4.5vw, 48px); height: clamp(30px, 4.5vw, 48px);
@@ -276,10 +231,19 @@
             font-family: 'Inter', sans-serif;
         }
         .panel-arrow {
-            font-size: 20px;
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .panel-arrow svg {
+            width: 20px;
+            height: 20px;
             transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .panel-arrow.open {
+        .panel-arrow.open svg {
             transform: rotate(180deg);
         }
         .buildings-list {
@@ -319,12 +283,13 @@
         /* ===== ПАНЕЛЬ ПОДСКАЗКИ ===== */
         .hint-panel {
             background: #ffffff;
+            border-top: 1px solid #e0e0e0;
             flex-shrink: 0;
             z-index: 1000;
         }
         .hint-text {
             padding: 8px 20px;
-            font-size: 13px; color: #546E7A;
+            font-size: 13px; color: #1a1a2e;
             display: flex; align-items: center; gap: 6px;
             min-height: 38px;
             font-family: 'Inter', sans-serif;
@@ -350,8 +315,7 @@
             <div class="subtitle">Навигационная карта</div>
         </div>
     </div>
-    <button class="btn-install" id="installBtn">📲 Добавить</button>
-    <button class="btn-reset-route" id="btnResetRoute">✕ Сбросить</button>
+    <button class="btn-install" id="installBtn"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>Добавить</button>
 </div>
 
 <div class="map-wrapper" id="mapWrapper">
@@ -367,15 +331,15 @@
 
 <div class="buildings-panel" id="buildingsPanel">
     <div class="panel-header" id="panelHeader">
-        <span>📋 Корпуса и отделения</span>
-        <span class="panel-arrow" id="panelArrow">▲</span>
+        <span><img src="icons/hospital.svg" alt="Корпуса" style="width: 24px; height: 24px; vertical-align: middle; margin-right: 6px;">Корпуса и отделения</span>
+        <span class="panel-arrow" id="panelArrow"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></span>
     </div>
     <div class="buildings-list" id="buildingsList"></div>
 </div>
 
 <div class="hint-panel">
     <div class="hint-text">
-        <span class="emoji">👆</span> Нажми на корпус, чтобы построить маршрут
+        <span class="emoji"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg></span> Откройте вкладку для ознакомления
     </div>
 </div>
 
@@ -571,15 +535,6 @@
                 container.style.left = (sp.x * scale) + 'px';
                 container.style.top = (sp.y * scale) + 'px';
 
-                var pulse = document.createElement('div');
-                pulse.className = 'pulse';
-                container.appendChild(pulse);
-
-                var ellipseWrap = document.createElement('div');
-                ellipseWrap.className = 'pin-ellipse';
-                ellipseWrap.innerHTML = '<svg viewBox="0 0 30 10" xmlns="http://www.w3.org/2000/svg"><ellipse cx="15" cy="5" rx="13" ry="4" stroke="#E53935" stroke-width="2" fill="none"/></svg>';
-                container.appendChild(ellipseWrap);
-
                 var pinWrap = document.createElement('div');
                 pinWrap.className = 'pin';
                 pinWrap.innerHTML = '<svg viewBox="0 0 50 68" xmlns="http://www.w3.org/2000/svg"><defs><mask id="hole"><rect width="50" height="68" fill="white"/><circle cx="25" cy="25" r="8" fill="black"/></mask></defs><path d="M25 2 C12 2 2 12 2 25 C2 40 25 66 25 66 C25 66 48 40 48 25 C48 12 38 2 25 2 Z" fill="#E53935" stroke="white" stroke-width="3" stroke-linejoin="round" mask="url(#hole)"/><circle cx="25" cy="25" r="9" fill="none" stroke="white" stroke-width="2"/></svg>';
@@ -608,6 +563,8 @@
 
     // === ПОСТРОЕНИЕ МАРШРУТА ===
     var lastRouteNodeIds = null;
+    var routeSvgEl = null;
+    var routeAnimId = null;
 
     function setRoute(buildingId) {
         if (selectedBuildingId === buildingId) { clearRoute(); return; }
@@ -622,6 +579,7 @@
         updateRoutePanel(buildingId, result.distance);
         updateBuildingsListSelection();
         scrollToRoute(result.nodes);
+        drawRouteLine(result.nodes);
     }
 
     function scrollToRoute(nodeIds) {
@@ -638,12 +596,127 @@
         scrollContainer.scrollTo({ left: Math.max(0, centerX - halfView), behavior: 'smooth' });
     }
 
+    function buildSmoothPathData(nodeIds) {
+        if (nodeIds.length < 2) return '';
+        var pts = nodeIds.map(function(id) {
+            var n = allNodes[id];
+            return { x: n.x * scale, y: n.y * scale };
+        });
+
+        var d = 'M ' + pts[0].x + ' ' + pts[0].y;
+
+        if (pts.length === 2) {
+            d += ' L ' + pts[1].x + ' ' + pts[1].y;
+            return d;
+        }
+
+        var mx = (pts[0].x + pts[1].x) / 2;
+        var my = (pts[0].y + pts[1].y) / 2;
+        d += ' L ' + mx + ' ' + my;
+
+        for (var i = 1; i < pts.length - 1; i++) {
+            var mx2 = (pts[i].x + pts[i + 1].x) / 2;
+            var my2 = (pts[i].y + pts[i + 1].y) / 2;
+            d += ' Q ' + pts[i].x + ' ' + pts[i].y + ' ' + mx2 + ' ' + my2;
+        }
+
+        d += ' L ' + pts[pts.length - 1].x + ' ' + pts[pts.length - 1].y;
+        return d;
+    }
+
+    function drawRouteLine(nodeIds) {
+        clearRouteLine();
+
+        var markersLayer = document.getElementById('markersLayer');
+        var svgNS = 'http://www.w3.org/2000/svg';
+        var svg = document.createElementNS(svgNS, 'svg');
+        svg.setAttribute('id', 'routeSvg');
+        svg.style.position = 'absolute';
+        svg.style.top = '0';
+        svg.style.left = '0';
+        svg.style.width = '100%';
+        svg.style.height = '100%';
+        svg.style.pointerEvents = 'none';
+        svg.style.zIndex = '10';
+
+        var d = buildSmoothPathData(nodeIds);
+
+        var defs = document.createElementNS(svgNS, 'defs');
+        var mask = document.createElementNS(svgNS, 'mask');
+        mask.setAttribute('id', 'routeMask');
+
+        var maskLine = document.createElementNS(svgNS, 'path');
+        maskLine.setAttribute('d', d);
+        maskLine.setAttribute('fill', 'none');
+        maskLine.setAttribute('stroke', 'white');
+        maskLine.setAttribute('stroke-width', '3.5');
+        maskLine.setAttribute('stroke-linecap', 'round');
+        maskLine.setAttribute('stroke-linejoin', 'round');
+
+        mask.appendChild(maskLine);
+        defs.appendChild(mask);
+        svg.appendChild(defs);
+
+        var path = document.createElementNS(svgNS, 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', '#E53935');
+        path.setAttribute('stroke-width', '3.5');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        path.setAttribute('stroke-dasharray', '8 6');
+        path.setAttribute('opacity', '0.9');
+        path.setAttribute('mask', 'url(#routeMask)');
+
+        svg.appendChild(path);
+        markersLayer.appendChild(svg);
+        routeSvgEl = svg;
+
+        requestAnimationFrame(function() {
+            var totalLen = maskLine.getTotalLength();
+            if (totalLen === 0) return;
+            maskLine.setAttribute('stroke-dasharray', totalLen);
+            maskLine.setAttribute('stroke-dashoffset', totalLen);
+
+            var duration = 1000;
+            var startTime = null;
+
+            function animate(ts) {
+                if (!startTime) startTime = ts;
+                var elapsed = ts - startTime;
+                var t = Math.min(elapsed / duration, 1);
+                var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                maskLine.setAttribute('stroke-dashoffset', totalLen * (1 - eased));
+                if (t < 1) {
+                    routeAnimId = requestAnimationFrame(animate);
+                } else {
+                    routeAnimId = null;
+                }
+            }
+
+            routeAnimId = requestAnimationFrame(animate);
+        });
+    }
+
+    function clearRouteLine() {
+        if (routeAnimId) {
+            cancelAnimationFrame(routeAnimId);
+            routeAnimId = null;
+        }
+        if (routeSvgEl && routeSvgEl.parentNode) {
+            routeSvgEl.parentNode.removeChild(routeSvgEl);
+        }
+        routeSvgEl = null;
+    }
+
     function clearRoute() {
         selectedBuildingId = null;
+        lastRouteNodeIds = null;
+        clearRouteLine();
         updateRoutePanel(null, 0);
         updateBuildingsListSelection();
         if (scrollContainer) {
-            scrollContainer.scrollTo({ left: 0, behavior: 'smooth' });
+            centerOnStartPoint();
         }
     }
 
@@ -651,7 +724,6 @@
     function updateRoutePanel(buildingId, distance) {
         var panel = document.getElementById('routePanel');
         var info = document.getElementById('routeInfo');
-        var resetBtn = document.getElementById('btnResetRoute');
 
         if (buildingId) {
             var meters = Math.round(distance * metersPerPixel);
@@ -659,10 +731,8 @@
             var name = building ? building.name : ('Корпус ' + buildingId);
             info.innerHTML = '🚶 ' + name + ' <span class="distance-badge">≈ ' + meters + ' м</span>';
             panel.classList.add('show');
-            resetBtn.classList.add('show');
         } else {
             panel.classList.remove('show');
-            resetBtn.classList.remove('show');
         }
     }
 
@@ -822,6 +892,9 @@ function setupPanelToggle() {
         var isPanelOpen = panel.classList.contains('open');
         applyScale(isPanelOpen);
         repositionMarkers();
+        if (lastRouteNodeIds) {
+            drawRouteLine(lastRouteNodeIds);
+        }
     }
 
     function setupResizeHandler() {
@@ -843,7 +916,7 @@ function setupPanelToggle() {
         if (!node) return;
         var centerX = node.x * scale;
         var halfView = scrollContainer.getBoundingClientRect().width / 2;
-        scrollContainer.scrollLeft = Math.max(0, centerX - halfView);
+        scrollContainer.scrollTo({ left: Math.max(0, centerX - halfView), behavior: 'smooth' });
     }
 
     // === ЗАПУСК ===
@@ -859,7 +932,6 @@ function setupPanelToggle() {
         setupPanelToggle();
         setupResizeHandler();
 
-        document.getElementById('btnResetRoute').addEventListener('click', clearRoute);
         document.getElementById('btnCloseRoute').addEventListener('click', clearRoute);
     }
 
