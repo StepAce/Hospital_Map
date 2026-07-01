@@ -129,6 +129,8 @@
             width: clamp(30px, 5vw, 48px);
             height: clamp(40px, 6.67vw, 64px);
             transform: translate(-50%, -100%);
+            transform-origin: bottom center;
+            transition: transform 0.35s ease;
         }
         .pin {
             position: absolute;
@@ -148,61 +150,56 @@
             0%, 100% { transform: translateX(-50%) translateY(-10px); }
             50% { transform: translateX(-50%) translateY(0px); }
         }
+        @keyframes pin-bounce-small {
+            0%, 100% { transform: translateX(-50%) translateY(-7px); }
+            50% { transform: translateX(-50%) translateY(0px); }
+        }
+        @keyframes dash-run {
+            0% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: -28; }
+        }
         .building-marker {
             position: absolute;
             width: clamp(30px, 4.5vw, 48px); height: clamp(30px, 4.5vw, 48px);
             border-radius: 50%;
-            background: #D7CCC8;
-            border: 3px solid #8D6E63;
+            background: #ffffff;
+            border: 1px solid #000000;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
             font-size: clamp(14px, 2.5vw, 24px);
-            color: #5D4037;
+            color: #000000;
             font-family: 'Inter', sans-serif;
             cursor: pointer;
             transform: translate(-50%, -50%);
+            transition: transform 0.35s ease;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
 
-        /* ===== ПАНЕЛЬ МАРШРУТА (плавающая) ===== */
-        .route-panel {
+        .dept-pin-container {
             position: absolute;
-            bottom: 12px; left: 12px; right: 12px;
-            background: white;
-            border-radius: 14px;
-            padding: 10px 16px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 10px;
-            z-index: 1000;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.25);
-            display: none;
-            min-height: 48px;
+            width: clamp(30px, 5vw, 48px);
+            height: clamp(40px, 6.67vw, 64px);
+            transform: translate(-50%, -100%);
+            transform-origin: bottom center;
+            transition: transform 0.35s ease;
+            z-index: 6;
         }
-        .route-panel.show { display: flex; }
-        .route-info { font-size: 15px; font-weight: 500; color: #263238; font-family: 'Inter', sans-serif; }
-        .distance-badge {
-            background: #42A5F5; color: white;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 14px; font-weight: 700;
-            margin-left: 6px;
-            font-family: 'Inter', sans-serif;
+        .dept-pin {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 83.333%;
+            height: 85%;
+            transform: translateX(-50%);
+            z-index: 3;
         }
-        .btn-close-route {
-            background: #EF5350; color: white;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 20px;
-            font-size: 13px; font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-            min-height: 40px; min-width: 48px;
-            font-family: 'Inter', sans-serif;
+        .dept-pin svg {
+            width: 100%;
+            height: 100%;
         }
-        .btn-close-route:active { transform: scale(0.96); }
 
         /* ===== ПАНЕЛЬ КОРПУСОВ ===== */
         .buildings-panel {
@@ -252,27 +249,86 @@
             -webkit-overflow-scrolling: touch;
         }
         .building-item {
+            border-bottom: 1px solid #e0e0e0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .building-row {
             display: flex; align-items: center; gap: 14px;
             padding: 12px 20px;
             cursor: pointer;
-            border-bottom: 1px solid #e0e0e0;
             min-height: 52px;
             -webkit-tap-highlight-color: transparent;
             user-select: none;
             font-family: 'Inter', sans-serif;
         }
-        .building-item:active { background: #E3F2FD; }
-        .building-item.selected { background: #E3F2FD; }
+        .building-row:active { }
+        .building-item.selected .building-name { color: #1565C0; }
+
+        .building-arrow {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1a1a2e;
+        }
+        .building-arrow svg {
+            width: 18px;
+            height: 18px;
+            transition: transform 0.3s ease;
+        }
+        .building-arrow.expanded svg {
+            transform: rotate(90deg);
+        }
+
+        .depts-container {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .depts-container.expanded { max-height: 300px; }
+
+        .dept-item {
+            padding: 10px 20px 10px 68px;
+            font-size: 14px;
+            color: #1a1a2e;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .dept-reset {
+            display: none;
+            width: 20px;
+            height: 20px;
+            font-size: 14px;
+            color: #E53935;
+            cursor: pointer;
+            flex-shrink: 0;
+            line-height: 20px;
+            text-align: center;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .dept-item.active .dept-reset { display: block; }
+        .dept-item.active { background: #E3F2FD; }
         .building-num {
             width: 34px; height: 34px;
-            background: #EEEEEE;
+            background: #ffffff;
             border-radius: 50%;
+            border: 1px solid #000000;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 800;
             font-size: 16px;
-            color: #37474F;
+            color: #000000;
             flex-shrink: 0;
             font-family: 'Inter', sans-serif;
         }
@@ -291,6 +347,7 @@
             padding: 8px 20px;
             font-size: 13px; color: #1a1a2e;
             display: flex; align-items: center; gap: 6px;
+            justify-content: space-between;
             min-height: 38px;
             font-family: 'Inter', sans-serif;
         }
@@ -298,9 +355,50 @@
             display: inline-block;
             animation: bounce 1.3s ease-in-out infinite;
         }
+        .hint-reset {
+            display: none;
+            width: 20px;
+            height: 20px;
+            font-size: 14px;
+            color: #E53935;
+            cursor: pointer;
+            flex-shrink: 0;
+            line-height: 20px;
+            text-align: center;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
         @keyframes bounce {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(5px); }
+        }
+
+        body.panel-open .pin-container {
+            transform: translate(-50%, -100%) scale(0.7);
+        }
+        body.panel-open .pin {
+            animation-name: pin-bounce-small;
+        }
+        body.panel-open .building-marker {
+            transform: translate(-50%, -50%) scale(0.7);
+        }
+        body.panel-open .dept-pin-container {
+            transform: translate(-50%, -100%) scale(0.7);
+        }
+
+        .route-running {
+            animation: dash-run 1s linear infinite;
+        }
+
+        .pin-container.route-active .pin { animation: none; }
+        .dept-pin-container.route-active .dept-pin {
+            animation-name: pin-bounce;
+            animation-duration: 2s;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+        }
+        body.panel-open .dept-pin-container.route-active .dept-pin {
+            animation-name: pin-bounce-small;
         }
 
     </style>
@@ -323,10 +421,6 @@
         <img id="mapImage" alt="Карта больницы">
         <div id="markersLayer"></div>
     </div>
-    <div class="route-panel" id="routePanel">
-        <span class="route-info" id="routeInfo"></span>
-        <button class="btn-close-route" id="btnCloseRoute">✕</button>
-    </div>
 </div>
 
 <div class="buildings-panel" id="buildingsPanel">
@@ -338,8 +432,10 @@
 </div>
 
 <div class="hint-panel">
-    <div class="hint-text">
-        <span class="emoji"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg></span> Откройте вкладку для ознакомления
+    <div class="hint-text" id="hintText">
+        <span id="hintLabel">Откройте вкладку для ознакомления</span>
+        <span class="emoji" id="hintEmoji"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg></span>
+        <span class="hint-reset" id="hintReset" style="display:none">&times;</span>
     </div>
 </div>
 
@@ -355,11 +451,33 @@
     var graph = {};
     var startKey = 'qr_gate';
     var selectedBuildingId = null;
+    var selectedDeptId = null;
+    var selectedDeptName = null;
     var buildingMarkerEls = {};
     var startPinEl = null;
+    var deptPinEl = null;
     var metersPerPixel = 0.25;
     var scrollContainer = null;
     var mapSizes = null;
+    var hintLabel = null;
+    var hintEmoji = null;
+    var hintReset = null;
+
+    function updateHint() {
+        var panel = document.getElementById('buildingsPanel');
+        var isPanelOpen = panel.classList.contains('open');
+
+        if (isPanelOpen || !selectedDeptId) {
+            hintLabel.textContent = 'Откройте вкладку для ознакомления';
+            hintEmoji.style.display = 'inline-block';
+            hintReset.style.display = 'none';
+        } else {
+            var building = findBuildingById(selectedBuildingId);
+            hintLabel.textContent = (building ? building.name : '') + ', ' + selectedDeptName;
+            hintEmoji.style.display = 'none';
+            hintReset.style.display = 'block';
+        }
+    }
 
     // === ЗАГРУЗКА ДАННЫХ ===
     async function loadData() {
@@ -396,6 +514,23 @@
             var dist = Math.hypot(dx, dy);
             graph[a][b] = dist;
             graph[b][a] = dist;
+        });
+
+        appData.buildings.forEach(function(b) {
+            var depts = getDeptObjects(b.departments);
+            depts.forEach(function(d) {
+                var deptKey = 'D' + d.id;
+                allNodes[deptKey] = { x: d.x, y: d.y, name: d.name, isDept: true, buildingId: b.id, deptId: d.id };
+                graph[deptKey] = {};
+                var bKey = 'B' + b.id;
+                if (allNodes[bKey]) {
+                    var dx = allNodes[bKey].x - allNodes[deptKey].x;
+                    var dy = allNodes[bKey].y - allNodes[deptKey].y;
+                    var dist = Math.hypot(dx, dy);
+                    graph[bKey][deptKey] = dist;
+                    graph[deptKey][bKey] = dist;
+                }
+            });
         });
     }
 
@@ -519,6 +654,13 @@
             dot.style.left = (b.x * scale) + 'px';
             dot.style.top = (b.y * scale) + 'px';
         });
+        if (deptPinEl && selectedDeptId) {
+            var dNode = allNodes['D' + selectedDeptId];
+            if (dNode) {
+                deptPinEl.style.left = (dNode.x * scale) + 'px';
+                deptPinEl.style.top = (dNode.y * scale) + 'px';
+            }
+        }
     }
 
     function findBuildingById(id) {
@@ -555,31 +697,70 @@
             dot.textContent = b.id;
             dot.style.left = (b.x * scale) + 'px';
             dot.style.top = (b.y * scale) + 'px';
-            dot.addEventListener('click', function() { setRoute(b.id); });
+            dot.addEventListener('click', function() { openPanelForBuilding(b.id); });
             layer.appendChild(dot);
             buildingMarkerEls[b.id] = dot;
         });
     }
 
+    function renderDeptMarker(deptId) {
+        clearDeptMarker();
+        if (!deptId) return;
+        var node = allNodes['D' + deptId];
+        if (!node) return;
+        var layer = document.getElementById('markersLayer');
+        var container = document.createElement('div');
+        container.className = 'dept-pin-container';
+        container.style.left = (node.x * scale) + 'px';
+        container.style.top = (node.y * scale) + 'px';
+        var pin = document.createElement('div');
+        pin.className = 'dept-pin';
+        pin.innerHTML = '<svg viewBox="0 0 50 68" xmlns="http://www.w3.org/2000/svg"><defs><mask id="deptBluePinHole"><rect width="50" height="68" fill="white"/><circle cx="25" cy="25" r="8" fill="black"/></mask></defs><path d="M25 2 C12 2 2 12 2 25 C2 40 25 66 25 66 C25 66 48 40 48 25 C48 12 38 2 25 2 Z" fill="#1565C0" stroke="white" stroke-width="3" stroke-linejoin="round" mask="url(#deptBluePinHole)"/><circle cx="25" cy="25" r="9" fill="none" stroke="white" stroke-width="2"/></svg>';
+        container.appendChild(pin);
+        layer.appendChild(container);
+        deptPinEl = container;
+    }
+
+    function clearDeptMarker() {
+        if (deptPinEl && deptPinEl.parentNode) {
+            deptPinEl.parentNode.removeChild(deptPinEl);
+        }
+        deptPinEl = null;
+    }
+
     // === ПОСТРОЕНИЕ МАРШРУТА ===
     var lastRouteNodeIds = null;
     var routeSvgEl = null;
+    var routePathEl = null;
+    var routeGradientEl = null;
     var routeAnimId = null;
 
-    function setRoute(buildingId) {
-        if (selectedBuildingId === buildingId) { clearRoute(); return; }
+    function setRoute(buildingId, deptId, deptName) {
+        var toKey;
+        if (deptId) {
+            if (selectedDeptId === deptId) { clearRoute(); return; }
+            toKey = 'D' + deptId;
+        } else {
+            if (selectedBuildingId === buildingId && !selectedDeptId) { clearRoute(); return; }
+            toKey = 'B' + buildingId;
+        }
 
-        var toKey = 'B' + buildingId;
         var result = findPath(startKey, toKey);
         if (!result) return;
 
         lastRouteNodeIds = result.nodes;
 
         selectedBuildingId = buildingId;
-        updateRoutePanel(buildingId, result.distance);
+        selectedDeptId = deptId || null;
+        selectedDeptName = deptName || null;
+        updateDeptItemsActive();
         updateBuildingsListSelection();
         scrollToRoute(result.nodes);
-        drawRouteLine(result.nodes);
+        drawRouteLine(result.nodes, false);
+        renderDeptMarker(deptId);
+        updateHint();
+        if (startPinEl) startPinEl.classList.add('route-active');
+        if (deptPinEl) deptPinEl.classList.add('route-active');
     }
 
     function scrollToRoute(nodeIds) {
@@ -624,7 +805,7 @@
         return d;
     }
 
-    function drawRouteLine(nodeIds) {
+    function drawRouteLine(nodeIds, skipAnimation) {
         clearRouteLine();
 
         var markersLayer = document.getElementById('markersLayer');
@@ -641,61 +822,89 @@
 
         var d = buildSmoothPathData(nodeIds);
 
+        var startNode = allNodes[nodeIds[0]];
+        var endNode = allNodes[nodeIds[nodeIds.length - 1]];
+
         var defs = document.createElementNS(svgNS, 'defs');
-        var mask = document.createElementNS(svgNS, 'mask');
-        mask.setAttribute('id', 'routeMask');
-
-        var maskLine = document.createElementNS(svgNS, 'path');
-        maskLine.setAttribute('d', d);
-        maskLine.setAttribute('fill', 'none');
-        maskLine.setAttribute('stroke', 'white');
-        maskLine.setAttribute('stroke-width', '3.5');
-        maskLine.setAttribute('stroke-linecap', 'round');
-        maskLine.setAttribute('stroke-linejoin', 'round');
-
-        mask.appendChild(maskLine);
-        defs.appendChild(mask);
-        svg.appendChild(defs);
+        var gradient = document.createElementNS(svgNS, 'linearGradient');
+        gradient.setAttribute('id', 'routeGradient');
+        gradient.setAttribute('x1', startNode.x * scale);
+        gradient.setAttribute('y1', startNode.y * scale);
+        gradient.setAttribute('x2', endNode.x * scale);
+        gradient.setAttribute('y2', endNode.y * scale);
+        gradient.setAttribute('gradientUnits', 'userSpaceOnUse');
+        var stop1 = document.createElementNS(svgNS, 'stop');
+        stop1.setAttribute('offset', '0%');
+        stop1.setAttribute('stop-color', '#E53935');
+        var stop2 = document.createElementNS(svgNS, 'stop');
+        stop2.setAttribute('offset', '100%');
+        stop2.setAttribute('stop-color', '#1565C0');
+        gradient.appendChild(stop1);
+        gradient.appendChild(stop2);
+        defs.appendChild(gradient);
+        routeGradientEl = gradient;
 
         var path = document.createElementNS(svgNS, 'path');
         path.setAttribute('d', d);
         path.setAttribute('fill', 'none');
-        path.setAttribute('stroke', '#E53935');
+        path.setAttribute('stroke', 'url(#routeGradient)');
         path.setAttribute('stroke-width', '3.5');
         path.setAttribute('stroke-linecap', 'round');
         path.setAttribute('stroke-linejoin', 'round');
-        path.setAttribute('stroke-dasharray', '8 6');
-        path.setAttribute('opacity', '0.9');
-        path.setAttribute('mask', 'url(#routeMask)');
 
-        svg.appendChild(path);
-        markersLayer.appendChild(svg);
-        routeSvgEl = svg;
+        if (skipAnimation) {
+            path.setAttribute('stroke-dasharray', '8 6');
+            path.setAttribute('opacity', '0.9');
+            path.classList.add('route-running');
+            svg.appendChild(defs);
+            svg.appendChild(path);
+            markersLayer.appendChild(svg);
+            routeSvgEl = svg;
+            routePathEl = path;
+        } else {
+            var mask = document.createElementNS(svgNS, 'mask');
+            mask.setAttribute('id', 'routeMask');
+            var maskLine = document.createElementNS(svgNS, 'path');
+            maskLine.setAttribute('d', d);
+            maskLine.setAttribute('fill', 'none');
+            maskLine.setAttribute('stroke', 'white');
+            maskLine.setAttribute('stroke-width', '3.5');
+            maskLine.setAttribute('stroke-linecap', 'round');
+            maskLine.setAttribute('stroke-linejoin', 'round');
+            mask.appendChild(maskLine);
+            defs.appendChild(mask);
+            svg.appendChild(defs);
+            path.setAttribute('stroke-dasharray', '8 6');
+            path.setAttribute('opacity', '0.9');
+            path.setAttribute('mask', 'url(#routeMask)');
+            svg.appendChild(path);
+            markersLayer.appendChild(svg);
+            routeSvgEl = svg;
 
-        requestAnimationFrame(function() {
-            var totalLen = maskLine.getTotalLength();
-            if (totalLen === 0) return;
-            maskLine.setAttribute('stroke-dasharray', totalLen);
-            maskLine.setAttribute('stroke-dashoffset', totalLen);
-
-            var duration = 1000;
-            var startTime = null;
-
-            function animate(ts) {
-                if (!startTime) startTime = ts;
-                var elapsed = ts - startTime;
-                var t = Math.min(elapsed / duration, 1);
-                var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-                maskLine.setAttribute('stroke-dashoffset', totalLen * (1 - eased));
-                if (t < 1) {
-                    routeAnimId = requestAnimationFrame(animate);
-                } else {
-                    routeAnimId = null;
+            requestAnimationFrame(function() {
+                var totalLen = maskLine.getTotalLength();
+                if (totalLen === 0) return;
+                maskLine.setAttribute('stroke-dasharray', totalLen);
+                maskLine.setAttribute('stroke-dashoffset', totalLen);
+                var duration = 1000;
+                var startTime = null;
+                function animate(ts) {
+                    if (!startTime) startTime = ts;
+                    var elapsed = ts - startTime;
+                    var t = Math.min(elapsed / duration, 1);
+                    var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+                    maskLine.setAttribute('stroke-dashoffset', totalLen * (1 - eased));
+                    if (t < 1) {
+                        routeAnimId = requestAnimationFrame(animate);
+                    } else {
+                        routeAnimId = null;
+                        path.classList.add('route-running');
+                    }
                 }
-            }
-
-            routeAnimId = requestAnimationFrame(animate);
-        });
+                routeAnimId = requestAnimationFrame(animate);
+            });
+            return;
+        }
     }
 
     function clearRouteLine() {
@@ -707,32 +916,37 @@
             routeSvgEl.parentNode.removeChild(routeSvgEl);
         }
         routeSvgEl = null;
+        routePathEl = null;
+        routeGradientEl = null;
+    }
+
+    function updateRoutePathData(nodeIds) {
+        if (!routePathEl) return;
+        var d = buildSmoothPathData(nodeIds);
+        routePathEl.setAttribute('d', d);
+        if (routeGradientEl) {
+            var startNode = allNodes[nodeIds[0]];
+            var endNode = allNodes[nodeIds[nodeIds.length - 1]];
+            routeGradientEl.setAttribute('x1', startNode.x * scale);
+            routeGradientEl.setAttribute('y1', startNode.y * scale);
+            routeGradientEl.setAttribute('x2', endNode.x * scale);
+            routeGradientEl.setAttribute('y2', endNode.y * scale);
+        }
     }
 
     function clearRoute() {
         selectedBuildingId = null;
+        selectedDeptId = null;
+        selectedDeptName = null;
         lastRouteNodeIds = null;
         clearRouteLine();
-        updateRoutePanel(null, 0);
+        clearDeptMarker();
+        updateHint();
+        if (startPinEl) startPinEl.classList.remove('route-active');
+        updateDeptItemsActive();
         updateBuildingsListSelection();
         if (scrollContainer) {
             centerOnStartPoint();
-        }
-    }
-
-    // === ПАНЕЛЬ ИНФОРМАЦИИ О МАРШРУТЕ ===
-    function updateRoutePanel(buildingId, distance) {
-        var panel = document.getElementById('routePanel');
-        var info = document.getElementById('routeInfo');
-
-        if (buildingId) {
-            var meters = Math.round(distance * metersPerPixel);
-            var building = findBuildingById(buildingId);
-            var name = building ? building.name : ('Корпус ' + buildingId);
-            info.innerHTML = '🚶 ' + name + ' <span class="distance-badge">≈ ' + meters + ' м</span>';
-            panel.classList.add('show');
-        } else {
-            panel.classList.remove('show');
         }
     }
 
@@ -741,26 +955,114 @@
         var list = document.getElementById('buildingsList');
         list.innerHTML = '';
         appData.buildings.forEach(function(b) {
-            var div = document.createElement('div');
-            div.className = 'building-item';
-            div.setAttribute('data-building-id', b.id);
-            div.innerHTML =
+            var item = document.createElement('div');
+            item.className = 'building-item';
+            item.setAttribute('data-building-id', b.id);
+
+            var row = document.createElement('div');
+            row.className = 'building-row';
+            var deptNamesRaw = parseDepartments(b.departments);
+            row.innerHTML =
                 '<div class="building-num">' + b.id + '</div>' +
                 '<div class="building-info">' +
                     '<div class="building-name">' + escHtml(b.name) + '</div>' +
-                    '<div class="building-depts">' + escHtml(b.departments) + '</div>' +
+                    '<div class="building-depts">' + escHtml(deptNamesRaw.join(', ')) + '</div>' +
+                '</div>' +
+                '<div class="building-arrow">' +
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>' +
                 '</div>';
-            div.addEventListener('click', function() { setRoute(b.id); });
-            list.appendChild(div);
+
+            var deptsContainer = document.createElement('div');
+            deptsContainer.className = 'depts-container';
+
+            var deptObjs = getDeptObjects(b.departments);
+            if (deptObjs.length) {
+                deptObjs.forEach(function(dept) {
+                    var deptItem = document.createElement('div');
+                    deptItem.className = 'dept-item';
+                    if (dept.id) deptItem.setAttribute('data-dept-id', dept.id);
+                    deptItem.innerHTML = '<span class="dept-label">\u2022 ' + escHtml(dept.name || dept) + '</span><span class="dept-reset">\u2715</span>';
+                    deptItem.querySelector('.dept-reset').addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        clearRoute();
+                    });
+                    deptItem.addEventListener('click', function(e) {
+                        if (e.target.classList.contains('dept-reset')) return;
+                        e.stopPropagation();
+                        if (dept.id && dept.x !== undefined) {
+                            setRoute(b.id, dept.id, dept.name);
+                        } else {
+                            setRoute(b.id);
+                        }
+                    });
+                    deptsContainer.appendChild(deptItem);
+                });
+            } else {
+                deptNamesRaw.forEach(function(deptName) {
+                    var deptItem = document.createElement('div');
+                    deptItem.className = 'dept-item';
+                    deptItem.innerHTML = '<span class="dept-label">\u2022 ' + escHtml(deptName) + '</span><span class="dept-reset">\u2715</span>';
+                    deptItem.querySelector('.dept-reset').addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        clearRoute();
+                    });
+                    deptItem.addEventListener('click', function(e) {
+                        if (e.target.classList.contains('dept-reset')) return;
+                        e.stopPropagation();
+                        setRoute(b.id);
+                    });
+                    deptsContainer.appendChild(deptItem);
+                });
+            }
+
+            row.addEventListener('click', function() {
+                var arrowEl = row.querySelector('.building-arrow');
+                var isOpen = deptsContainer.classList.contains('expanded');
+                if (isOpen) {
+                    arrowEl.classList.remove('expanded');
+                    deptsContainer.classList.remove('expanded');
+                } else {
+                    arrowEl.classList.add('expanded');
+                    deptsContainer.classList.add('expanded');
+                }
+            });
+
+            item.appendChild(row);
+            item.appendChild(deptsContainer);
+            list.appendChild(item);
         });
+    }
+
+    function parseDepartments(raw) {
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw.map(function(d) { return d.name || d; });
+        return raw.split(',').map(function(d) { return d.trim(); });
+    }
+
+    function getDeptObjects(raw) {
+        if (!raw) return [];
+        if (Array.isArray(raw)) return raw;
+        return [];
     }
 
     function updateBuildingsListSelection() {
         var items = document.querySelectorAll('.building-item');
         items.forEach(function(item) {
             var bid = parseInt(item.getAttribute('data-building-id'));
-            if (bid === selectedBuildingId) item.classList.add('selected');
+            if (bid === selectedBuildingId && !selectedDeptId) item.classList.add('selected');
             else item.classList.remove('selected');
+        });
+    }
+
+    function updateDeptItemsActive() {
+        var deptItems = document.querySelectorAll('.dept-item');
+        deptItems.forEach(function(item) {
+            var did = item.getAttribute('data-dept-id');
+            if (did && parseInt(did) === selectedDeptId) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
         });
     }
 
@@ -771,6 +1073,35 @@
     }
 
     // === ПАНЕЛЬ КОРПУСОВ: JS-АНИМАЦИЯ ===
+    function collapseAllBuildings() {
+        var expandedContainers = document.querySelectorAll('.depts-container.expanded');
+        expandedContainers.forEach(function(c) {
+            c.classList.remove('expanded');
+            var arrow = c.parentElement.querySelector('.building-arrow');
+            if (arrow) arrow.classList.remove('expanded');
+        });
+    }
+
+    function expandBuildingAccordion(buildingId) {
+        var item = document.querySelector('.building-item[data-building-id="' + buildingId + '"]');
+        if (!item) return;
+        var deptsContainer = item.querySelector('.depts-container');
+        var arrowEl = item.querySelector('.building-arrow');
+        if (deptsContainer && !deptsContainer.classList.contains('expanded')) {
+            deptsContainer.classList.add('expanded');
+            if (arrowEl) arrowEl.classList.add('expanded');
+        }
+    }
+
+    function openPanelForBuilding(buildingId) {
+        var panel = document.getElementById('buildingsPanel');
+        if (!panel.classList.contains('open')) {
+            document.getElementById('panelHeader').click();
+        }
+        collapseAllBuildings();
+        expandBuildingAccordion(buildingId);
+    }
+
 function setupPanelToggle() {
     var panel = document.getElementById('buildingsPanel');
     var header = document.getElementById('panelHeader');
@@ -825,6 +1156,7 @@ function setupPanelToggle() {
             }
             applyScale(false);
             repositionMarkers();
+            if (lastRouteNodeIds) { updateRoutePathData(lastRouteNodeIds); }
             if (targetOpen && scrollContainer) {
                 scrollContainer.scrollLeft = Math.max(0, savedCenter * scale - scrollContainer.clientWidth / 2);
             }
@@ -839,12 +1171,14 @@ function setupPanelToggle() {
                     }
                     applyScale(true);
                     repositionMarkers();
+                    if (lastRouteNodeIds) { drawRouteLine(lastRouteNodeIds, true); }
                     if (scrollContainer) {
                         scrollContainer.scrollLeft = Math.max(0, savedCenter * scale - scrollContainer.clientWidth / 2);
                     }
                 } else {
                     applyScale(false);
                     repositionMarkers();
+                    if (lastRouteNodeIds) { drawRouteLine(lastRouteNodeIds, true); }
                 }
             }
         }
@@ -855,16 +1189,26 @@ function setupPanelToggle() {
     header.addEventListener('click', function() {
         isPanelOpen = !isPanelOpen;
 
+        if (!isPanelOpen) {
+            collapseAllBuildings();
+        }
+        if (isPanelOpen && selectedBuildingId) {
+            expandBuildingAccordion(selectedBuildingId);
+        }
+
         var currentHeight = panel.offsetHeight;
         var targetHeight = getTargetHeight(isPanelOpen);
 
         if (isPanelOpen) {
             panel.classList.add('open');
             arrow.classList.add('open');
+            document.body.classList.add('panel-open');
         } else {
             panel.classList.remove('open');
             arrow.classList.remove('open');
+            document.body.classList.remove('panel-open');
         }
+        updateHint();
 
         animatePanelHeight(currentHeight, targetHeight, isPanelOpen);
     });
@@ -893,7 +1237,7 @@ function setupPanelToggle() {
         applyScale(isPanelOpen);
         repositionMarkers();
         if (lastRouteNodeIds) {
-            drawRouteLine(lastRouteNodeIds);
+            updateRoutePathData(lastRouteNodeIds);
         }
     }
 
@@ -921,6 +1265,11 @@ function setupPanelToggle() {
 
     // === ЗАПУСК ===
     async function main() {
+        hintLabel = document.getElementById('hintLabel');
+        hintEmoji = document.getElementById('hintEmoji');
+        hintReset = document.getElementById('hintReset');
+        hintReset.addEventListener('click', function() { clearRoute(); });
+
         await loadData();
         buildGraph();
         await initMap();
@@ -932,7 +1281,6 @@ function setupPanelToggle() {
         setupPanelToggle();
         setupResizeHandler();
 
-        document.getElementById('btnCloseRoute').addEventListener('click', clearRoute);
     }
 
     window.addEventListener('beforeinstallprompt', function(e) {
