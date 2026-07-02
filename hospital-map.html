@@ -467,15 +467,26 @@
         var panel = document.getElementById('buildingsPanel');
         var isPanelOpen = panel.classList.contains('open');
 
-        if (isPanelOpen || !selectedDeptId) {
-            hintLabel.textContent = 'Откройте вкладку для ознакомления';
-            hintEmoji.style.display = 'inline-block';
-            hintReset.style.display = 'none';
-        } else {
+        if (selectedDeptId) {
             var building = findBuildingById(selectedBuildingId);
             hintLabel.textContent = (building ? building.name : '') + ', ' + selectedDeptName;
             hintEmoji.style.display = 'none';
             hintReset.style.display = 'block';
+        } else if (!isPanelOpen) {
+            hintLabel.textContent = 'Откройте вкладку для ознакомления';
+            hintEmoji.style.display = 'inline-block';
+            hintReset.style.display = 'none';
+        } else {
+            var anyExpanded = document.querySelector('.depts-container.expanded');
+            if (anyExpanded) {
+                hintLabel.textContent = 'Выберите отделение для построения маршрута';
+                hintEmoji.style.display = 'none';
+                hintReset.style.display = 'none';
+            } else {
+                hintLabel.textContent = 'Выберите корпус';
+                hintEmoji.style.display = 'inline-block';
+                hintReset.style.display = 'none';
+            }
         }
     }
 
@@ -497,24 +508,20 @@
             allNodes[key] = { x: b.x, y: b.y, name: b.name, isBuilding: true, buildingId: b.id };
             graph[key] = {};
         });
-        appData.waypoints.forEach(function(w) {
-            allNodes[w.id] = { x: w.x, y: w.y, isWaypoint: true };
-            graph[w.id] = {};
-        });
+
         appData.startPoints.forEach(function(s) {
             allNodes[s.id] = { x: s.x, y: s.y, name: s.name, isStart: true };
             graph[s.id] = {};
         });
 
-        appData.graph.edges.forEach(function(e) {
-            var a = e[0], b = e[1];
+        var addEdge = function(a, b) {
             if (!allNodes[a] || !allNodes[b]) return;
             var dx = allNodes[a].x - allNodes[b].x;
             var dy = allNodes[a].y - allNodes[b].y;
             var dist = Math.hypot(dx, dy);
             graph[a][b] = dist;
             graph[b][a] = dist;
-        });
+        };
 
         appData.buildings.forEach(function(b) {
             var depts = getDeptObjects(b.departments);
@@ -522,16 +529,41 @@
                 var deptKey = 'D' + d.id;
                 allNodes[deptKey] = { x: d.x, y: d.y, name: d.name, isDept: true, buildingId: b.id, deptId: d.id };
                 graph[deptKey] = {};
-                var bKey = 'B' + b.id;
-                if (allNodes[bKey]) {
-                    var dx = allNodes[bKey].x - allNodes[deptKey].x;
-                    var dy = allNodes[bKey].y - allNodes[deptKey].y;
-                    var dist = Math.hypot(dx, dy);
-                    graph[bKey][deptKey] = dist;
-                    graph[deptKey][bKey] = dist;
+
+                var wpts = d.waypoints;
+                if (wpts && wpts.length > 0) {
+                    wpts.forEach(function(w) {
+                        if (!allNodes[w.id]) {
+                            allNodes[w.id] = { x: w.x, y: w.y, isWaypoint: true };
+                            graph[w.id] = {};
+                        }
+                    });
+
+                    addEdge(startKey, wpts[0].id);
+
+                    for (var i = 0; i < wpts.length - 1; i++) {
+                        addEdge(wpts[i].id, wpts[i + 1].id);
+                    }
+
+                    addEdge(wpts[wpts.length - 1].id, deptKey);
                 }
             });
         });
+
+        if (appData.waypoints) {
+            appData.waypoints.forEach(function(w) {
+                if (!allNodes[w.id]) {
+                    allNodes[w.id] = { x: w.x, y: w.y, isWaypoint: true };
+                    graph[w.id] = {};
+                }
+            });
+        }
+
+        if (appData.graph && appData.graph.edges) {
+            appData.graph.edges.forEach(function(e) {
+                addEdge(e[0], e[1]);
+            });
+        }
     }
 
     // === АЛГОРИТМ ДЕЙКСТРЫ ===
@@ -779,6 +811,7 @@
 
     function buildSmoothPathData(nodeIds) {
         if (nodeIds.length < 2) return '';
+        var CURVE = 0.25;
         var pts = nodeIds.map(function(id) {
             var n = allNodes[id];
             return { x: n.x * scale, y: n.y * scale };
@@ -791,13 +824,14 @@
             return d;
         }
 
-        var mx = (pts[0].x + pts[1].x) / 2;
-        var my = (pts[0].y + pts[1].y) / 2;
+        var f = 0.5 * CURVE;
+        var mx = pts[0].x + (pts[1].x - pts[0].x) * f;
+        var my = pts[0].y + (pts[1].y - pts[0].y) * f;
         d += ' L ' + mx + ' ' + my;
 
         for (var i = 1; i < pts.length - 1; i++) {
-            var mx2 = (pts[i].x + pts[i + 1].x) / 2;
-            var my2 = (pts[i].y + pts[i + 1].y) / 2;
+            var mx2 = pts[i].x + (pts[i + 1].x - pts[i].x) * f;
+            var my2 = pts[i].y + (pts[i + 1].y - pts[i].y) * f;
             d += ' Q ' + pts[i].x + ' ' + pts[i].y + ' ' + mx2 + ' ' + my2;
         }
 
@@ -1025,6 +1059,7 @@
                     arrowEl.classList.add('expanded');
                     deptsContainer.classList.add('expanded');
                 }
+                updateHint();
             });
 
             item.appendChild(row);
@@ -1080,6 +1115,7 @@
             var arrow = c.parentElement.querySelector('.building-arrow');
             if (arrow) arrow.classList.remove('expanded');
         });
+        if (expandedContainers.length > 0) updateHint();
     }
 
     function expandBuildingAccordion(buildingId) {
@@ -1090,6 +1126,7 @@
         if (deptsContainer && !deptsContainer.classList.contains('expanded')) {
             deptsContainer.classList.add('expanded');
             if (arrowEl) arrowEl.classList.add('expanded');
+            updateHint();
         }
     }
 
