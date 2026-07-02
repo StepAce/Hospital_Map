@@ -401,6 +401,35 @@
             animation-name: pin-bounce-small;
         }
 
+        .start-label {
+            position: absolute;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(1px);
+            -webkit-backdrop-filter: blur(16px);
+            padding: 8px 16px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #000000;
+            border: 1px solid rgba(255,255,255,0.4);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+            pointer-events: none;
+            white-space: nowrap;
+            font-family: 'Inter', sans-serif;
+            z-index: 20;
+            transform: translate(16px, calc(-100% - 4px));
+            transform-origin: bottom left;
+            transition: transform 0.35s ease, opacity 0.35s ease;
+            animation: labelFadeIn 0.3s ease both;
+        }
+        body.panel-open .start-label {
+            transform: translate(16px, calc(-100% - 4px)) scale(0.7);
+        }
+        @keyframes labelFadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
     </style>
 </head>
 <body>
@@ -455,6 +484,7 @@
     var selectedDeptName = null;
     var buildingMarkerEls = {};
     var startPinEl = null;
+    var startLabelEl = null;
     var deptPinEl = null;
     var metersPerPixel = 0.25;
     var scrollContainer = null;
@@ -672,11 +702,17 @@
     }
 
     function repositionMarkers() {
-        if (startPinEl) {
+        if (startPinEl || startLabelEl) {
             var sp = appData.startPoints.find(function(p) { return p.id === startKey; });
             if (sp) {
-                startPinEl.style.left = (sp.x * scale) + 'px';
-                startPinEl.style.top = (sp.y * scale) + 'px';
+                if (startPinEl) {
+                    startPinEl.style.left = (sp.x * scale) + 'px';
+                    startPinEl.style.top = (sp.y * scale) + 'px';
+                }
+                if (startLabelEl) {
+                    startLabelEl.style.left = (sp.x * scale) + 'px';
+                    startLabelEl.style.top = (sp.y * scale) + 'px';
+                }
             }
         }
         Object.keys(buildingMarkerEls).forEach(function(bid) {
@@ -716,6 +752,14 @@
 
                 markersLayer.appendChild(container);
                 startPinEl = container;
+
+                var label = document.createElement('div');
+                label.className = 'start-label';
+                label.textContent = 'Вы у КПП';
+                label.style.left = (sp.x * scale) + 'px';
+                label.style.top = (sp.y * scale) + 'px';
+                markersLayer.appendChild(label);
+                startLabelEl = label;
             }
         });
     }

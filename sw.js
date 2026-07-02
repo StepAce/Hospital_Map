@@ -1,29 +1,35 @@
-var CACHE_NAME = 'hospital-nav-v1';
+var CACHE_NAME = 'hospital-nav-v2';
 
 var PRECACHE = [
   '/',
   '/hospital-map.html',
   '/data.json',
   '/hospital-map.webp',
-  '/hospital-map.png',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+  '/icons/hospital.svg',
+  '/icons/chevron-down.svg',
+  '/icons/chevron-right.svg',
+  '/icons/chevron-up.svg',
+  '/icons/chevrons-up.svg',
+  '/icons/download.svg'
 ];
+
+function preCache(url) {
+  return fetch(url).then(function(response) {
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    return caches.open(CACHE_NAME).then(function(cache) {
+      return cache.put(url, response);
+    });
+  }).catch(function(err) {
+    console.warn('SW: failed to pre-cache', url, err);
+  });
+}
 
 self.addEventListener('install', function(event) {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache) {
-      return Promise.allSettled(
-        PRECACHE.map(function(url) {
-          return cache.add(url).catch(function(err) {
-            console.warn('SW: failed to pre-cache', url, err);
-          });
-        })
-      );
-    }).then(function() {
+    Promise.all(PRECACHE.map(preCache)).then(function() {
       return self.skipWaiting();
     })
   );
@@ -43,6 +49,8 @@ self.addEventListener('activate', function(event) {
 });
 
 self.addEventListener('fetch', function(event) {
+  if (event.request.method !== 'GET') return;
+
   event.respondWith(
     caches.match(event.request).then(function(cached) {
       if (cached) return cached;
@@ -56,7 +64,10 @@ self.addEventListener('fetch', function(event) {
         });
         return response;
       }).catch(function() {
-        // Network and cache both unavailable — silent fallback
+        if (event.request.mode === 'navigate') {
+          return caches.match('/hospital-map.html');
+        }
+        return new Response('', { status: 408, statusText: 'Offline' });
       });
     })
   );
