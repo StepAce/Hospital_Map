@@ -178,6 +178,25 @@
             user-select: none;
         }
 
+        .dept-dot {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #1565C0;
+            border: 2px solid #ffffff;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 7;
+            transition: transform 0.15s ease, width 0.15s ease, height 0.15s ease;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .dept-dot:hover, .dept-dot:active {
+            width: 14px;
+            height: 14px;
+        }
+
         .dept-pin-container {
             position: absolute;
             width: clamp(30px, 5vw, 48px);
@@ -382,6 +401,9 @@
         body.panel-open .building-marker {
             transform: translate(-50%, -50%) scale(0.7);
         }
+        body.panel-open .dept-dot {
+            transform: translate(-50%, -50%) scale(0.7);
+        }
         body.panel-open .dept-pin-container {
             transform: translate(-50%, -100%) scale(0.7);
         }
@@ -483,10 +505,13 @@
     var selectedDeptId = null;
     var selectedDeptName = null;
     var buildingMarkerEls = {};
+    var deptDotEls = {};
     var startPinEl = null;
     var startLabelEl = null;
+    var startDotEl = null;
     var deptPinEl = null;
     var metersPerPixel = 0.25;
+    var PIN_Y_OFFSET = 6;
     var scrollContainer = null;
     var mapSizes = null;
     var hintLabel = null;
@@ -707,11 +732,15 @@
             if (sp) {
                 if (startPinEl) {
                     startPinEl.style.left = (sp.x * scale) + 'px';
-                    startPinEl.style.top = (sp.y * scale) + 'px';
+                    startPinEl.style.top = (sp.y * scale - PIN_Y_OFFSET) + 'px';
                 }
                 if (startLabelEl) {
                     startLabelEl.style.left = (sp.x * scale) + 'px';
-                    startLabelEl.style.top = (sp.y * scale) + 'px';
+                    startLabelEl.style.top = (sp.y * scale - PIN_Y_OFFSET) + 'px';
+                }
+                if (startDotEl) {
+                    startDotEl.setAttribute('cx', sp.x * scale);
+                    startDotEl.setAttribute('cy', sp.y * scale);
                 }
             }
         }
@@ -722,11 +751,18 @@
             dot.style.left = (b.x * scale) + 'px';
             dot.style.top = (b.y * scale) + 'px';
         });
+        Object.keys(deptDotEls).forEach(function(did) {
+            var dn = allNodes['D' + did];
+            if (!dn) return;
+            var dot = deptDotEls[did];
+            dot.style.left = (dn.x * scale) + 'px';
+            dot.style.top = (dn.y * scale) + 'px';
+        });
         if (deptPinEl && selectedDeptId) {
             var dNode = allNodes['D' + selectedDeptId];
             if (dNode) {
                 deptPinEl.style.left = (dNode.x * scale) + 'px';
-                deptPinEl.style.top = (dNode.y * scale) + 'px';
+                deptPinEl.style.top = (dNode.y * scale - PIN_Y_OFFSET) + 'px';
             }
         }
     }
@@ -743,11 +779,11 @@
                 var container = document.createElement('div');
                 container.className = 'pin-container';
                 container.style.left = (sp.x * scale) + 'px';
-                container.style.top = (sp.y * scale) + 'px';
+                container.style.top = (sp.y * scale - PIN_Y_OFFSET) + 'px';
 
                 var pinWrap = document.createElement('div');
                 pinWrap.className = 'pin';
-                pinWrap.innerHTML = '<svg viewBox="0 0 50 68" xmlns="http://www.w3.org/2000/svg"><defs><mask id="hole"><rect width="50" height="68" fill="white"/><circle cx="25" cy="25" r="8" fill="black"/></mask></defs><path d="M25 2 C12 2 2 12 2 25 C2 40 25 66 25 66 C25 66 48 40 48 25 C48 12 38 2 25 2 Z" fill="#E53935" stroke="white" stroke-width="3" stroke-linejoin="round" mask="url(#hole)"/><circle cx="25" cy="25" r="9" fill="none" stroke="white" stroke-width="2"/></svg>';
+                pinWrap.innerHTML = '<svg viewBox="0 0 50 68" xmlns="http://www.w3.org/2000/svg"><defs><mask id="hole"><rect width="50" height="68" fill="white"/><circle cx="25" cy="25" r="8" fill="black"/></mask></defs><path d="M25 2 C12 2 2 12 2 25 C2 40 25 66 25 66 C25 66 48 40 48 25 C48 12 38 2 25 2 Z" fill="#E53935" stroke="white" stroke-width="2" stroke-linejoin="round" mask="url(#hole)"/><circle cx="25" cy="25" r="9" fill="none" stroke="white" stroke-width="2"/></svg>';
                 container.appendChild(pinWrap);
 
                 markersLayer.appendChild(container);
@@ -757,9 +793,27 @@
                 label.className = 'start-label';
                 label.textContent = 'Вы у КПП';
                 label.style.left = (sp.x * scale) + 'px';
-                label.style.top = (sp.y * scale) + 'px';
+                label.style.top = (sp.y * scale - PIN_Y_OFFSET) + 'px';
                 markersLayer.appendChild(label);
                 startLabelEl = label;
+
+                var svgNS = 'http://www.w3.org/2000/svg';
+                var permSvg = document.createElementNS(svgNS, 'svg');
+                permSvg.style.position = 'absolute';
+                permSvg.style.top = '0';
+                permSvg.style.left = '0';
+                permSvg.style.width = '100%';
+                permSvg.style.height = '100%';
+                permSvg.style.pointerEvents = 'none';
+                permSvg.style.zIndex = '15';
+                var redDot = document.createElementNS(svgNS, 'circle');
+                redDot.setAttribute('cx', sp.x * scale);
+                redDot.setAttribute('cy', sp.y * scale);
+                redDot.setAttribute('r', '4');
+                redDot.setAttribute('fill', '#E53935');
+                permSvg.appendChild(redDot);
+                markersLayer.appendChild(permSvg);
+                startDotEl = redDot;
             }
         });
     }
@@ -779,6 +833,29 @@
         });
     }
 
+    function renderDeptDots() {
+        var layer = document.getElementById('markersLayer');
+        deptDotEls = {};
+        appData.buildings.forEach(function(b) {
+            var depts = getDeptObjects(b.departments);
+            depts.forEach(function(d) {
+                if (d.x === undefined || d.y === undefined) return;
+                var dot = document.createElement('div');
+                dot.className = 'dept-dot';
+                dot.style.left = (d.x * scale) + 'px';
+                dot.style.top = (d.y * scale) + 'px';
+                dot.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    setRoute(b.id, d.id, d.name);
+                });
+                dot.addEventListener('pointerenter', function() { dot.style.width = '14px'; dot.style.height = '14px'; });
+                dot.addEventListener('pointerleave', function() { dot.style.width = ''; dot.style.height = ''; });
+                layer.appendChild(dot);
+                deptDotEls[d.id] = dot;
+            });
+        });
+    }
+
     function renderDeptMarker(deptId) {
         clearDeptMarker();
         if (!deptId) return;
@@ -788,10 +865,10 @@
         var container = document.createElement('div');
         container.className = 'dept-pin-container';
         container.style.left = (node.x * scale) + 'px';
-        container.style.top = (node.y * scale) + 'px';
+        container.style.top = (node.y * scale - PIN_Y_OFFSET) + 'px';
         var pin = document.createElement('div');
         pin.className = 'dept-pin';
-        pin.innerHTML = '<svg viewBox="0 0 50 68" xmlns="http://www.w3.org/2000/svg"><defs><mask id="deptBluePinHole"><rect width="50" height="68" fill="white"/><circle cx="25" cy="25" r="8" fill="black"/></mask></defs><path d="M25 2 C12 2 2 12 2 25 C2 40 25 66 25 66 C25 66 48 40 48 25 C48 12 38 2 25 2 Z" fill="#1565C0" stroke="white" stroke-width="3" stroke-linejoin="round" mask="url(#deptBluePinHole)"/><circle cx="25" cy="25" r="9" fill="none" stroke="white" stroke-width="2"/></svg>';
+        pin.innerHTML = '<svg viewBox="0 0 50 68" xmlns="http://www.w3.org/2000/svg"><defs><mask id="deptBluePinHole"><rect width="50" height="68" fill="white"/><circle cx="25" cy="25" r="8" fill="black"/></mask></defs><path d="M25 2 C12 2 2 12 2 25 C2 40 25 66 25 66 C25 66 48 40 48 25 C48 12 38 2 25 2 Z" fill="#1565C0" stroke="white" stroke-width="2" stroke-linejoin="round" mask="url(#deptBluePinHole)"/><circle cx="25" cy="25" r="9" fill="none" stroke="white" stroke-width="2"/></svg>';
         container.appendChild(pin);
         layer.appendChild(container);
         deptPinEl = container;
@@ -810,6 +887,8 @@
     var routePathEl = null;
     var routeGradientEl = null;
     var routeAnimId = null;
+    var routeStartCircle = null;
+    var routeEndCircle = null;
 
     function setRoute(buildingId, deptId, deptName) {
         var toKey;
@@ -883,6 +962,22 @@
         return d;
     }
 
+    function addEndpointCircles(svg, nodeIds) {
+        var svgNS = 'http://www.w3.org/2000/svg';
+        var endNode = allNodes[nodeIds[nodeIds.length - 1]];
+
+        routeStartCircle = startDotEl;
+
+        var endCircle = document.createElementNS(svgNS, 'circle');
+        endCircle.setAttribute('cx', endNode.x * scale);
+        endCircle.setAttribute('cy', endNode.y * scale);
+        endCircle.setAttribute('r', '4');
+        endCircle.setAttribute('fill', '#1565C0');
+        endCircle.setAttribute('opacity', '0');
+        svg.appendChild(endCircle);
+        routeEndCircle = endCircle;
+    }
+
     function drawRouteLine(nodeIds, skipAnimation) {
         clearRouteLine();
 
@@ -936,6 +1031,8 @@
             path.classList.add('route-running');
             svg.appendChild(defs);
             svg.appendChild(path);
+            addEndpointCircles(svg, nodeIds);
+            routeEndCircle.setAttribute('opacity', '1');
             markersLayer.appendChild(svg);
             routeSvgEl = svg;
             routePathEl = path;
@@ -956,6 +1053,7 @@
             path.setAttribute('opacity', '0.9');
             path.setAttribute('mask', 'url(#routeMask)');
             svg.appendChild(path);
+            addEndpointCircles(svg, nodeIds);
             markersLayer.appendChild(svg);
             routeSvgEl = svg;
 
@@ -972,6 +1070,9 @@
                     var t = Math.min(elapsed / duration, 1);
                     var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
                     maskLine.setAttribute('stroke-dashoffset', totalLen * (1 - eased));
+                    if (routeEndCircle) {
+                        routeEndCircle.setAttribute('opacity', eased);
+                    }
                     if (t < 1) {
                         routeAnimId = requestAnimationFrame(animate);
                     } else {
@@ -996,6 +1097,8 @@
         routeSvgEl = null;
         routePathEl = null;
         routeGradientEl = null;
+        routeStartCircle = null;
+        routeEndCircle = null;
     }
 
     function updateRoutePathData(nodeIds) {
@@ -1009,6 +1112,16 @@
             routeGradientEl.setAttribute('y1', startNode.y * scale);
             routeGradientEl.setAttribute('x2', endNode.x * scale);
             routeGradientEl.setAttribute('y2', endNode.y * scale);
+        }
+        if (routeStartCircle) {
+            var sn = allNodes[nodeIds[0]];
+            routeStartCircle.setAttribute('cx', sn.x * scale);
+            routeStartCircle.setAttribute('cy', sn.y * scale);
+        }
+        if (routeEndCircle) {
+            var en = allNodes[nodeIds[nodeIds.length - 1]];
+            routeEndCircle.setAttribute('cx', en.x * scale);
+            routeEndCircle.setAttribute('cy', en.y * scale);
         }
     }
 
@@ -1358,6 +1471,7 @@ function setupPanelToggle() {
         centerOnStartPoint();
         renderMarkers();
         renderBuildingMarkers();
+        renderDeptDots();
         renderBuildingsList();
         setupPanelToggle();
         setupResizeHandler();
