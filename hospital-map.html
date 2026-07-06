@@ -185,7 +185,6 @@
             border-radius: 50%;
             background: #1565C0;
             border: 2px solid #ffffff;
-            transform: translate(-50%, -50%);
             cursor: pointer;
             z-index: 7;
             transition: transform 0.15s ease, width 0.15s ease, height 0.15s ease;
@@ -379,7 +378,6 @@
             transform: translate(-50%, -50%) scale(0.7);
         }
         body.panel-open .dept-dot {
-            transform: translate(-50%, -50%) scale(0.7);
         }
 
         .route-running {
@@ -403,15 +401,14 @@
         }
         .label-dot {
             position: absolute;
-            width: 8px;
-            height: 8px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             background: rgba(231, 6, 6, 0.9);
+            border: 2px solid white;
         }
-        .label-group {
-            transition: transform 0.35s ease;
-        }
-        body.panel-open .label-group {
+
+        body.panel-open .start-label {
             display: none;
         }
         body.panel-open .label-dot {
@@ -473,9 +470,9 @@
     var buildingMarkerEls = {};
     var startPinEl = null;
     var labelEls = [];
-    var startDotEl = null;
     var metersPerPixel = 0.25;
-    var PIN_Y_OFFSET = 6;
+    var PIN_OFFSET_Y = 8;
+    var PIN_OFFSET_X = 0;
     var scrollContainer = null;
     var mapSizes = null;
     var hintLabel = null;
@@ -688,33 +685,19 @@
 
     function repositionMarkers() {
         if (startPinEl) {
-            var sp = appData.startPoints.find(function(p) { return p.id === startKey; });
-            if (sp) {
-                startPinEl.style.left = (sp.x * scale) + 'px';
-                startPinEl.style.top = (sp.y * scale - PIN_Y_OFFSET) + 'px';
-                if (startDotEl) {
-                    startDotEl.setAttribute('cx', sp.x * scale);
-                    startDotEl.setAttribute('cy', sp.y * scale);
-                }
+            var kppDept = findDeptById(1001);
+            if (kppDept) {
+                startPinEl.style.left = (kppDept.x * scale + PIN_OFFSET_X) + 'px';
+                startPinEl.style.top = (kppDept.y * scale - PIN_OFFSET_Y) + 'px';
             }
         }
-        if (appData.labels) {
-            labelEls.forEach(function(item) {
-                var lbl = item.data;
-                var minX = Math.min(lbl.label_x, lbl.dot_x);
-                var minY = Math.min(lbl.label_y, lbl.dot_y);
-                var w = Math.abs(lbl.label_x - lbl.dot_x);
-                var h = Math.abs(lbl.label_y - lbl.dot_y);
-                item.el.style.left = (minX * scale) + 'px';
-                item.el.style.top = (minY * scale) + 'px';
-                item.el.style.width = Math.max(w * scale, 20) + 'px';
-                item.el.style.height = Math.max(h * scale, 20) + 'px';
-                item.badge.style.left = ((lbl.label_x - minX) * scale) + 'px';
-                item.badge.style.top = ((lbl.label_y - minY) * scale) + 'px';
-                item.dot.style.left = ((lbl.dot_x - minX) * scale - 4) + 'px';
-                item.dot.style.top = ((lbl.dot_y - minY) * scale - 4) + 'px';
-            });
-        }
+        labelEls.forEach(function(item) {
+            var lbl = item.data;
+            item.badge.style.left = (lbl.label_x * scale) + 'px';
+            item.badge.style.top = (lbl.label_y * scale) + 'px';
+            item.dot.style.left = (lbl.dot_x * scale - 8) + 'px';
+            item.dot.style.top = (lbl.dot_y * scale - 8) + 'px';
+        });
         Object.keys(buildingMarkerEls).forEach(function(bid) {
             var b = findBuildingById(parseInt(bid));
             if (!b) return;
@@ -731,40 +714,34 @@
     // === ОТРИСОВКА МАРКЕРОВ ===
     function renderMarkers() {
         var markersLayer = document.getElementById('markersLayer');
-        appData.startPoints.forEach(function(sp) {
-            if (sp.id === startKey) {
-                var container = document.createElement('div');
-                container.className = 'pin-container';
-                container.style.left = (sp.x * scale) + 'px';
-                container.style.top = (sp.y * scale - PIN_Y_OFFSET) + 'px';
 
-                var pinWrap = document.createElement('div');
-                pinWrap.className = 'pin';
-                pinWrap.innerHTML = '<svg viewBox="0 0 50 68" xmlns="http://www.w3.org/2000/svg"><defs><mask id="hole"><rect width="50" height="68" fill="white"/><circle cx="25" cy="25" r="8" fill="black"/></mask></defs><path d="M25 2 C12 2 2 12 2 25 C2 40 25 66 25 66 C25 66 48 40 48 25 C48 12 38 2 25 2 Z" fill="#E53935" stroke="white" stroke-width="2" stroke-linejoin="round" mask="url(#hole)"/><circle cx="25" cy="25" r="9" fill="none" stroke="white" stroke-width="2"/></svg>';
-                container.appendChild(pinWrap);
+        var kppDept = findDeptById(1001);
+        if (kppDept) {
+            var container = document.createElement('div');
+            container.className = 'pin-container';
+            container.style.left = (kppDept.x * scale + PIN_OFFSET_X) + 'px';
+            container.style.top = (kppDept.y * scale - PIN_OFFSET_Y) + 'px';
 
-                markersLayer.appendChild(container);
-                startPinEl = container;
+            var pinWrap = document.createElement('div');
+            pinWrap.className = 'pin';
+            pinWrap.innerHTML = '<svg viewBox="0 0 50 68" xmlns="http://www.w3.org/2000/svg"><defs><mask id="hole"><rect width="50" height="68" fill="white"/><circle cx="25" cy="25" r="8" fill="black"/></mask></defs><path d="M25 2 C12 2 2 12 2 25 C2 40 25 66 25 66 C25 66 48 40 48 25 C48 12 38 2 25 2 Z" fill="#E53935" stroke="white" stroke-width="2" stroke-linejoin="round" mask="url(#hole)"/><circle cx="25" cy="25" r="9" fill="none" stroke="white" stroke-width="2"/></svg>';
+            container.appendChild(pinWrap);
 
-                var svgNS = 'http://www.w3.org/2000/svg';
-                var permSvg = document.createElementNS(svgNS, 'svg');
-                permSvg.style.position = 'absolute';
-                permSvg.style.top = '0';
-                permSvg.style.left = '0';
-                permSvg.style.width = '100%';
-                permSvg.style.height = '100%';
-                permSvg.style.pointerEvents = 'none';
-                permSvg.style.zIndex = '15';
-                var redDot = document.createElementNS(svgNS, 'circle');
-                redDot.setAttribute('cx', sp.x * scale);
-                redDot.setAttribute('cy', sp.y * scale);
-                redDot.setAttribute('r', '4');
-                redDot.setAttribute('fill', '#E53935');
-                permSvg.appendChild(redDot);
-                markersLayer.appendChild(permSvg);
-                startDotEl = redDot;
+            markersLayer.appendChild(container);
+            startPinEl = container;
+        }
+    }
+
+    function findDeptById(deptId) {
+        if (!appData || !appData.buildings) return null;
+        for (var i = 0; i < appData.buildings.length; i++) {
+            var b = appData.buildings[i];
+            var depts = getDeptObjects(b.departments);
+            for (var j = 0; j < depts.length; j++) {
+                if (depts[j].id === deptId) return depts[j];
             }
-        });
+        }
+        return null;
     }
 
     function renderLabels() {
@@ -772,21 +749,6 @@
         labelEls = [];
 
         var generatedLabels = [];
-
-        if (appData.startPoints) {
-            appData.startPoints.forEach(function(sp) {
-                if (sp.id === startKey) {
-                    generatedLabels.push({
-                        id: 'label_start_' + sp.id,
-                        text: 'Вы у ' + sp.name,
-                        label_x: sp.x + 16,
-                        label_y: sp.y - 8,
-                        dot_x: sp.x,
-                        dot_y: sp.y
-                    });
-                }
-            });
-        }
 
         if (appData.buildings) {
             appData.buildings.forEach(function(b) {
@@ -809,47 +771,40 @@
         }
 
         generatedLabels.forEach(function(lbl) {
-            var minX = Math.min(lbl.label_x, lbl.dot_x);
-            var minY = Math.min(lbl.label_y, lbl.dot_y);
-            var w = Math.abs(lbl.label_x - lbl.dot_x);
-            var h = Math.abs(lbl.label_y - lbl.dot_y);
-
-            var wrapper = document.createElement('div');
-            wrapper.className = 'label-group';
-            wrapper.style.position = 'absolute';
-            wrapper.style.pointerEvents = 'auto';
-            wrapper.style.cursor = 'pointer';
-            wrapper.style.zIndex = '20';
-            wrapper.style.left = (minX * scale) + 'px';
-            wrapper.style.top = (minY * scale) + 'px';
-            wrapper.style.width = Math.max(w * scale, 20) + 'px';
-            wrapper.style.height = Math.max(h * scale, 20) + 'px';
-
+            var badge = document.createElement('div');
+            badge.className = 'start-label';
+            badge.innerHTML = lbl.text.replace(/\n/g, '<br>');
+            badge.style.position = 'absolute';
+            badge.style.left = (lbl.label_x * scale) + 'px';
+            badge.style.top = (lbl.label_y * scale) + 'px';
+            badge.style.transform = 'translate(-50%, -50%)';
+            badge.style.zIndex = '20';
+            badge.style.pointerEvents = 'auto';
+            badge.style.cursor = 'pointer';
             if (lbl.target) {
-                wrapper.addEventListener('click', function() {
+                badge.addEventListener('click', function() {
                     handleLabelTarget(lbl.target);
                 });
             }
 
-            var badge = document.createElement('div');
-            badge.className = 'start-label';
-            badge.innerHTML = lbl.text.replace(/\n/g, '<br>');
-            badge.style.left = ((lbl.label_x - minX) * scale) + 'px';
-            badge.style.top = ((lbl.label_y - minY) * scale) + 'px';
-            badge.style.transform = 'translate(-50%, -50%)';
-            badge.style.zIndex = '2';
-            wrapper.appendChild(badge);
-
             var dot = document.createElement('div');
             dot.className = 'label-dot';
-            dot.style.left = ((lbl.dot_x - minX) * scale - 4) + 'px';
-            dot.style.top = ((lbl.dot_y - minY) * scale - 4) + 'px';
-            dot.style.zIndex = '2';
-            wrapper.appendChild(dot);
+            dot.style.position = 'absolute';
+            dot.style.left = (lbl.dot_x * scale - 8) + 'px';
+            dot.style.top = (lbl.dot_y * scale - 8) + 'px';
+            dot.style.zIndex = '20';
+            dot.style.pointerEvents = 'auto';
+            dot.style.cursor = 'pointer';
+            if (lbl.target) {
+                dot.addEventListener('click', function() {
+                    handleLabelTarget(lbl.target);
+                });
+            }
 
-            layer.appendChild(wrapper);
+            layer.appendChild(badge);
+            layer.appendChild(dot);
 
-            labelEls.push({ el: wrapper, badge: badge, dot: dot, data: lbl });
+            labelEls.push({ badge: badge, dot: dot, data: lbl });
         });
     }
 
