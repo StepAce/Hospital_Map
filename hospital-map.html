@@ -197,29 +197,6 @@
             height: 14px;
         }
 
-        .dept-pin-container {
-            position: absolute;
-            width: clamp(30px, 5vw, 48px);
-            height: clamp(40px, 6.67vw, 64px);
-            transform: translate(-50%, -100%);
-            transform-origin: bottom center;
-            transition: transform 0.35s ease;
-            z-index: 6;
-        }
-        .dept-pin {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            width: 83.333%;
-            height: 85%;
-            transform: translateX(-50%);
-            z-index: 3;
-        }
-        .dept-pin svg {
-            width: 100%;
-            height: 100%;
-        }
-
         /* ===== ПАНЕЛЬ КОРПУСОВ ===== */
         .buildings-panel {
             background: #ffffff;
@@ -404,52 +381,41 @@
         body.panel-open .dept-dot {
             transform: translate(-50%, -50%) scale(0.7);
         }
-        body.panel-open .dept-pin-container {
-            transform: translate(-50%, -100%) scale(0.7);
-        }
 
         .route-running {
             animation: dash-run 1s linear infinite;
         }
 
         .pin-container.route-active .pin { animation: none; }
-        .dept-pin-container.route-active .dept-pin {
-            animation-name: pin-bounce;
-            animation-duration: 2s;
-            animation-timing-function: ease-in-out;
-            animation-iteration-count: infinite;
-        }
-        body.panel-open .dept-pin-container.route-active .dept-pin {
-            animation-name: pin-bounce-small;
-        }
 
         .start-label {
             position: absolute;
-            background: #ffffff;
-            padding: 8px 16px;
-            border-radius: 14px;
-            font-size: 13px;
+            background: rgba(255,255,255,0.6);
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 11px;
             font-weight: 500;
-            color: #000000;
+            color: #1a1a2e;
             text-align: center;
-            border: 1px solid #e0e0e0;
+            border: 0.5px solid rgba(0,0,0,0.08);
             font-family: 'Inter', sans-serif;
             white-space: nowrap;
         }
         .label-dot {
             position: absolute;
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: rgba(231, 6, 6, 0.9);
-            border: 1.5px solid rgba(255,255,255,0.6);
         }
         .label-group {
             transition: transform 0.35s ease;
         }
         body.panel-open .label-group {
-            transform: scale(0.7);
-            transform-origin: top left;
+            display: none;
+        }
+        body.panel-open .label-dot {
+            display: none;
         }
 
     </style>
@@ -508,7 +474,6 @@
     var startPinEl = null;
     var labelEls = [];
     var startDotEl = null;
-    var deptPinEl = null;
     var metersPerPixel = 0.25;
     var PIN_Y_OFFSET = 6;
     var scrollContainer = null;
@@ -703,10 +668,6 @@
         var markersLayer = document.getElementById('markersLayer');
         markersLayer.style.width = totalWidth + 'px';
         markersLayer.style.height = totalHeight + 'px';
-
-        if (scrollContainer) {
-            scrollContainer.scrollLeft = Math.max(0, sp.x * scale - scrollContainer.clientWidth / 2);
-        }
     }
 
     function getAvailableHeight() {
@@ -750,8 +711,8 @@
                 item.el.style.height = Math.max(h * scale, 20) + 'px';
                 item.badge.style.left = ((lbl.label_x - minX) * scale) + 'px';
                 item.badge.style.top = ((lbl.label_y - minY) * scale) + 'px';
-                item.dot.style.left = ((lbl.dot_x - minX) * scale - 5) + 'px';
-                item.dot.style.top = ((lbl.dot_y - minY) * scale - 5) + 'px';
+                item.dot.style.left = ((lbl.dot_x - minX) * scale - 4) + 'px';
+                item.dot.style.top = ((lbl.dot_y - minY) * scale - 4) + 'px';
             });
         }
         Object.keys(buildingMarkerEls).forEach(function(bid) {
@@ -761,13 +722,6 @@
             dot.style.left = (b.x * scale) + 'px';
             dot.style.top = (b.y * scale) + 'px';
         });
-        if (deptPinEl && selectedDeptId) {
-            var dNode = allNodes['D' + selectedDeptId];
-            if (dNode) {
-                deptPinEl.style.left = (dNode.x * scale) + 'px';
-                deptPinEl.style.top = (dNode.y * scale - PIN_Y_OFFSET) + 'px';
-            }
-        }
     }
 
     function findBuildingById(id) {
@@ -888,8 +842,8 @@
 
             var dot = document.createElement('div');
             dot.className = 'label-dot';
-            dot.style.left = ((lbl.dot_x - minX) * scale - 5) + 'px';
-            dot.style.top = ((lbl.dot_y - minY) * scale - 5) + 'px';
+            dot.style.left = ((lbl.dot_x - minX) * scale - 4) + 'px';
+            dot.style.top = ((lbl.dot_y - minY) * scale - 4) + 'px';
             dot.style.zIndex = '2';
             wrapper.appendChild(dot);
 
@@ -940,39 +894,11 @@
         });
     }
 
-    function renderDeptMarker(deptId) {
-        clearDeptMarker();
-        if (!deptId) return;
-        var node = allNodes['D' + deptId];
-        if (!node) return;
-        var layer = document.getElementById('markersLayer');
-        var container = document.createElement('div');
-        container.className = 'dept-pin-container';
-        container.style.left = (node.x * scale) + 'px';
-        container.style.top = (node.y * scale - PIN_Y_OFFSET) + 'px';
-        var pin = document.createElement('div');
-        pin.className = 'dept-pin';
-        pin.innerHTML = '<svg viewBox="0 0 50 68" xmlns="http://www.w3.org/2000/svg"><defs><mask id="deptBluePinHole"><rect width="50" height="68" fill="white"/><circle cx="25" cy="25" r="8" fill="black"/></mask></defs><path d="M25 2 C12 2 2 12 2 25 C2 40 25 66 25 66 C25 66 48 40 48 25 C48 12 38 2 25 2 Z" fill="#1565C0" stroke="white" stroke-width="2" stroke-linejoin="round" mask="url(#deptBluePinHole)"/><circle cx="25" cy="25" r="9" fill="none" stroke="white" stroke-width="2"/></svg>';
-        container.appendChild(pin);
-        layer.appendChild(container);
-        deptPinEl = container;
-    }
-
-    function clearDeptMarker() {
-        if (deptPinEl && deptPinEl.parentNode) {
-            deptPinEl.parentNode.removeChild(deptPinEl);
-        }
-        deptPinEl = null;
-    }
-
     // === ПОСТРОЕНИЕ МАРШРУТА ===
     var lastRouteNodeIds = null;
     var routeSvgEl = null;
     var routePathEl = null;
-    var routeGradientEl = null;
     var routeAnimId = null;
-    var routeStartCircle = null;
-    var routeEndCircle = null;
 
     function setRoute(buildingId, deptId, deptName) {
         var toKey;
@@ -996,10 +922,8 @@
         updateBuildingsListSelection();
         scrollToRoute(result.nodes);
         drawRouteLine(result.nodes, false);
-        renderDeptMarker(deptId);
         updateHint();
         if (startPinEl) startPinEl.classList.add('route-active');
-        if (deptPinEl) deptPinEl.classList.add('route-active');
     }
 
     function scrollToRoute(nodeIds) {
@@ -1046,22 +970,6 @@
         return d;
     }
 
-    function addEndpointCircles(svg, nodeIds) {
-        var svgNS = 'http://www.w3.org/2000/svg';
-        var endNode = allNodes[nodeIds[nodeIds.length - 1]];
-
-        routeStartCircle = startDotEl;
-
-        var endCircle = document.createElementNS(svgNS, 'circle');
-        endCircle.setAttribute('cx', endNode.x * scale);
-        endCircle.setAttribute('cy', endNode.y * scale);
-        endCircle.setAttribute('r', '4');
-        endCircle.setAttribute('fill', '#1565C0');
-        endCircle.setAttribute('opacity', '0');
-        svg.appendChild(endCircle);
-        routeEndCircle = endCircle;
-    }
-
     function drawRouteLine(nodeIds, skipAnimation) {
         clearRouteLine();
 
@@ -1079,32 +987,10 @@
 
         var d = buildSmoothPathData(nodeIds);
 
-        var startNode = allNodes[nodeIds[0]];
-        var endNode = allNodes[nodeIds[nodeIds.length - 1]];
-
-        var defs = document.createElementNS(svgNS, 'defs');
-        var gradient = document.createElementNS(svgNS, 'linearGradient');
-        gradient.setAttribute('id', 'routeGradient');
-        gradient.setAttribute('x1', startNode.x * scale);
-        gradient.setAttribute('y1', startNode.y * scale);
-        gradient.setAttribute('x2', endNode.x * scale);
-        gradient.setAttribute('y2', endNode.y * scale);
-        gradient.setAttribute('gradientUnits', 'userSpaceOnUse');
-        var stop1 = document.createElementNS(svgNS, 'stop');
-        stop1.setAttribute('offset', '0%');
-        stop1.setAttribute('stop-color', '#E53935');
-        var stop2 = document.createElementNS(svgNS, 'stop');
-        stop2.setAttribute('offset', '100%');
-        stop2.setAttribute('stop-color', '#1565C0');
-        gradient.appendChild(stop1);
-        gradient.appendChild(stop2);
-        defs.appendChild(gradient);
-        routeGradientEl = gradient;
-
         var path = document.createElementNS(svgNS, 'path');
         path.setAttribute('d', d);
         path.setAttribute('fill', 'none');
-        path.setAttribute('stroke', 'url(#routeGradient)');
+        path.setAttribute('stroke', '#E53935');
         path.setAttribute('stroke-width', '3.5');
         path.setAttribute('stroke-linecap', 'round');
         path.setAttribute('stroke-linejoin', 'round');
@@ -1113,14 +999,12 @@
             path.setAttribute('stroke-dasharray', '8 6');
             path.setAttribute('opacity', '0.9');
             path.classList.add('route-running');
-            svg.appendChild(defs);
             svg.appendChild(path);
-            addEndpointCircles(svg, nodeIds);
-            routeEndCircle.setAttribute('opacity', '1');
             markersLayer.appendChild(svg);
             routeSvgEl = svg;
             routePathEl = path;
         } else {
+            var defs = document.createElementNS(svgNS, 'defs');
             var mask = document.createElementNS(svgNS, 'mask');
             mask.setAttribute('id', 'routeMask');
             var maskLine = document.createElementNS(svgNS, 'path');
@@ -1137,7 +1021,6 @@
             path.setAttribute('opacity', '0.9');
             path.setAttribute('mask', 'url(#routeMask)');
             svg.appendChild(path);
-            addEndpointCircles(svg, nodeIds);
             markersLayer.appendChild(svg);
             routeSvgEl = svg;
 
@@ -1154,9 +1037,6 @@
                     var t = Math.min(elapsed / duration, 1);
                     var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
                     maskLine.setAttribute('stroke-dashoffset', totalLen * (1 - eased));
-                    if (routeEndCircle) {
-                        routeEndCircle.setAttribute('opacity', eased);
-                    }
                     if (t < 1) {
                         routeAnimId = requestAnimationFrame(animate);
                     } else {
@@ -1180,33 +1060,12 @@
         }
         routeSvgEl = null;
         routePathEl = null;
-        routeGradientEl = null;
-        routeStartCircle = null;
-        routeEndCircle = null;
     }
 
     function updateRoutePathData(nodeIds) {
         if (!routePathEl) return;
         var d = buildSmoothPathData(nodeIds);
         routePathEl.setAttribute('d', d);
-        if (routeGradientEl) {
-            var startNode = allNodes[nodeIds[0]];
-            var endNode = allNodes[nodeIds[nodeIds.length - 1]];
-            routeGradientEl.setAttribute('x1', startNode.x * scale);
-            routeGradientEl.setAttribute('y1', startNode.y * scale);
-            routeGradientEl.setAttribute('x2', endNode.x * scale);
-            routeGradientEl.setAttribute('y2', endNode.y * scale);
-        }
-        if (routeStartCircle) {
-            var sn = allNodes[nodeIds[0]];
-            routeStartCircle.setAttribute('cx', sn.x * scale);
-            routeStartCircle.setAttribute('cy', sn.y * scale);
-        }
-        if (routeEndCircle) {
-            var en = allNodes[nodeIds[nodeIds.length - 1]];
-            routeEndCircle.setAttribute('cx', en.x * scale);
-            routeEndCircle.setAttribute('cy', en.y * scale);
-        }
     }
 
     function clearRoute() {
@@ -1215,7 +1074,6 @@
         selectedDeptName = null;
         lastRouteNodeIds = null;
         clearRouteLine();
-        clearDeptMarker();
         updateHint();
         if (startPinEl) startPinEl.classList.remove('route-active');
         updateDeptItemsActive();
@@ -1428,16 +1286,19 @@ function setupPanelToggle() {
             var currentHeight = fromHeight + (toHeight - fromHeight) * easedProgress;
             panel.style.height = currentHeight + 'px';
             
-            // Во время анимации всегда масштабируем по высоте
-            if (targetOpen && scrollContainer) {
+            if (scrollContainer) {
                 var savedCenter = (scrollContainer.scrollLeft + scrollContainer.clientWidth / 2) / (scale || 1);
             }
             applyScale(false);
             repositionMarkers();
-            if (lastRouteNodeIds) { updateRoutePathData(lastRouteNodeIds); }
-            if (targetOpen && scrollContainer) {
+            if (!targetOpen && scrollContainer) {
+                var targetCenter = allNodes[startKey] ? allNodes[startKey].x : (savedCenter || 0);
+                var lerpedCenter = savedCenter + (targetCenter - savedCenter) * easedProgress;
+                scrollContainer.scrollLeft = Math.max(0, lerpedCenter * scale - scrollContainer.clientWidth / 2);
+            } else if (targetOpen && scrollContainer) {
                 scrollContainer.scrollLeft = Math.max(0, savedCenter * scale - scrollContainer.clientWidth / 2);
             }
+            if (lastRouteNodeIds) { updateRoutePathData(lastRouteNodeIds); }
 
             if (progress < 1) {
                 animationId = requestAnimationFrame(step);
@@ -1456,6 +1317,7 @@ function setupPanelToggle() {
                 } else {
                     applyScale(false);
                     repositionMarkers();
+                    centerOnStartPoint();
                     if (lastRouteNodeIds) { drawRouteLine(lastRouteNodeIds, true); }
                 }
             }
@@ -1512,8 +1374,12 @@ function setupPanelToggle() {
         if (!img || !img.naturalWidth) return;
 
         var isPanelOpen = panel.classList.contains('open');
+        var savedCenter = scrollContainer ? (scrollContainer.scrollLeft + scrollContainer.clientWidth / 2) / (scale || 1) : null;
         applyScale(isPanelOpen);
         repositionMarkers();
+        if (scrollContainer && savedCenter !== null) {
+            scrollContainer.scrollLeft = Math.max(0, savedCenter * scale - scrollContainer.clientWidth / 2);
+        }
         if (lastRouteNodeIds) {
             updateRoutePathData(lastRouteNodeIds);
         }
