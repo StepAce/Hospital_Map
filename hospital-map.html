@@ -425,17 +425,14 @@
 
         .start-label {
             position: absolute;
-            background: rgba(255,255,255,0.2);
-            backdrop-filter: blur(1px);
-            -webkit-backdrop-filter: blur(16px);
+            background: #ffffff;
             padding: 8px 16px;
             border-radius: 14px;
             font-size: 13px;
             font-weight: 500;
             color: #000000;
             text-align: center;
-            border: 1px solid rgba(255,255,255,0.4);
-            box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+            border: 1px solid #e0e0e0;
             font-family: 'Inter', sans-serif;
             white-space: nowrap;
         }
@@ -445,22 +442,14 @@
             height: 10px;
             border-radius: 50%;
             background: rgba(231, 6, 6, 0.9);
-            backdrop-filter: blur(1px);
-            -webkit-backdrop-filter: blur(16px);
             border: 1.5px solid rgba(255,255,255,0.6);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
         }
         .label-group {
-            transition: transform 0.35s ease, opacity 0.35s ease;
-            animation: labelFadeIn 0.3s ease both;
+            transition: transform 0.35s ease;
         }
         body.panel-open .label-group {
             transform: scale(0.7);
             transform-origin: top left;
-        }
-        @keyframes labelFadeIn {
-            from { opacity: 0; }
-            to   { opacity: 1; }
         }
 
     </style>
@@ -763,24 +752,6 @@
                 item.badge.style.top = ((lbl.label_y - minY) * scale) + 'px';
                 item.dot.style.left = ((lbl.dot_x - minX) * scale - 5) + 'px';
                 item.dot.style.top = ((lbl.dot_y - minY) * scale - 5) + 'px';
-                var dotRadius = 5;
-                var bw = item.badgeDataW * scale;
-                var bh = item.badgeDataH * scale;
-                var dot_cx = (lbl.dot_x - minX) * scale;
-                var dot_cy = (lbl.dot_y - minY) * scale;
-                var bx = (lbl.label_x - minX) * scale - bw / 2;
-                var by = (lbl.label_y - minY) * scale - bh / 2;
-                var cx = dot_cx < bx ? bx : (dot_cx > bx + bw ? bx + bw : dot_cx);
-                var cy = dot_cy < by ? by : (dot_cy > by + bh ? by + bh : dot_cy);
-                var tdx = cx - dot_cx;
-                var tdy = cy - dot_cy;
-                var tdist = Math.hypot(tdx, tdy);
-                var tux = tdist > 0 ? tdx / tdist : 0;
-                var tuy = tdist > 0 ? tdy / tdist : 0;
-                item.line.setAttribute('x1', dot_cx + tux * dotRadius);
-                item.line.setAttribute('y1', dot_cy + tuy * dotRadius);
-                item.line.setAttribute('x2', cx);
-                item.line.setAttribute('y2', cy);
             });
         }
         Object.keys(buildingMarkerEls).forEach(function(bid) {
@@ -924,39 +895,7 @@
 
             layer.appendChild(wrapper);
 
-            var bw = badge.offsetWidth;
-            var bh = badge.offsetHeight;
-
-            var svgNS = 'http://www.w3.org/2000/svg';
-            var svg = document.createElementNS(svgNS, 'svg');
-            svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;overflow:visible;z-index:1;';
-            var line = document.createElementNS(svgNS, 'line');
-
-            var dot_cx = (lbl.dot_x - minX) * scale;
-            var dot_cy = (lbl.dot_y - minY) * scale;
-            var bx = (lbl.label_x - minX) * scale - bw / 2;
-            var by = (lbl.label_y - minY) * scale - bh / 2;
-            var cx = dot_cx < bx ? bx : (dot_cx > bx + bw ? bx + bw : dot_cx);
-            var cy = dot_cy < by ? by : (dot_cy > by + bh ? by + bh : dot_cy);
-
-            var tdx = cx - dot_cx;
-            var tdy = cy - dot_cy;
-            var tdist = Math.hypot(tdx, tdy);
-            var tux = tdist > 0 ? tdx / tdist : 0;
-            var tuy = tdist > 0 ? tdy / tdist : 0;
-            var dotRadius = 5;
-
-            line.setAttribute('x1', dot_cx + tux * dotRadius);
-            line.setAttribute('y1', dot_cy + tuy * dotRadius);
-            line.setAttribute('x2', cx);
-            line.setAttribute('y2', cy);
-            line.setAttribute('stroke', 'rgba(255,255,255,0.9)');
-            line.setAttribute('stroke-width', '2');
-            line.setAttribute('stroke-linecap', 'round');
-            svg.appendChild(line);
-            wrapper.appendChild(svg);
-
-            labelEls.push({ el: wrapper, badge: badge, dot: dot, line: line, data: lbl, badgeDataW: bw / scale, badgeDataH: bh / scale });
+            labelEls.push({ el: wrapper, badge: badge, dot: dot, data: lbl });
         });
     }
 
