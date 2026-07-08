@@ -1,0 +1,415 @@
+/* styles.css — стили навигационной карты больницы */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+    touch-action: manipulation; /* Отключает двойной тап для зума */
+    -webkit-text-size-adjust: 100%; /* Отключает авто-зум текста на iOS */
+}
+
+body {
+    background: #1a1a2e;
+    font-family: 'Inter', sans-serif;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ===== ШАПКА ===== */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    background: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+    flex-shrink: 0;
+    z-index: 1000;
+    font-family: 'Inter', sans-serif;
+}
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+.header-logo {
+    height: 48px;
+    width: auto;
+    border-radius: 10px;
+}
+.header-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.hospital-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a1a2e;
+    line-height: 1.2;
+    white-space: normal;
+    font-family: 'Inter', sans-serif;
+}
+.subtitle {
+    font-size: 11px;
+    color: #1565C0;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+}
+.btn-install {
+    background: #ffffff;
+    color: #1a1a2e;
+    border: 1px solid #1a1a2e;
+    padding: 6px 14px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-family: 'Inter', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.btn-install:active { transform: scale(0.96); }
+@media (max-width: 600px) {
+    .header-logo { height: 40px; }
+    .hospital-name { font-size: 14px; }
+    .subtitle { font-size: 10px; }
+    .btn-install { padding: 6px 12px; font-size: 11px; }
+    .header { padding: 6px 10px; }
+}
+
+/* ===== КАРТА ===== */
+.map-wrapper {
+    flex: 0 0 auto;
+    position: relative;
+    background: #1a1a2e;
+    width: 100%;
+}
+.map-scroll-container {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    overscroll-behavior: contain;
+    position: relative;
+    cursor: ew-resize;
+}
+.map-scroll-container img {
+    display: block;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+#markersLayer {
+    position: absolute;
+    top: 0; left: 0;
+    pointer-events: none;
+}
+#markersLayer > * { pointer-events: auto; }
+
+.pin-container {
+    position: absolute;
+    width: clamp(30px, 5vw, 48px);
+    height: clamp(40px, 6.67vw, 64px);
+    transform: translate(-50%, -100%);
+    transform-origin: bottom center;
+    transition: transform 0.35s ease;
+}
+.pin {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 83.333%;
+    height: 85%;
+    transform: translateX(-50%);
+    animation: pin-bounce 2s ease-in-out infinite;
+    z-index: 3;
+}
+.pin svg {
+    width: 100%;
+    height: 100%;
+}
+@keyframes pin-bounce {
+    0%, 100% { transform: translateX(-50%) translateY(-10px); }
+    50% { transform: translateX(-50%) translateY(0px); }
+}
+@keyframes pin-bounce-small {
+    0%, 100% { transform: translateX(-50%) translateY(-7px); }
+    50% { transform: translateX(-50%) translateY(0px); }
+}
+@keyframes dash-run {
+    0% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: -28; }
+}
+.building-marker {
+    position: absolute;
+    width: clamp(30px, 4.5vw, 48px); height: clamp(30px, 4.5vw, 48px);
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid #000000;
+    color: #000000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: clamp(14px, 2.5vw, 24px);
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    transition: transform 0.35s ease;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+.dept-dot {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #1565C0;
+    border: 2px solid #ffffff;
+    cursor: pointer;
+    z-index: 7;
+    transition: transform 0.15s ease, width 0.15s ease, height 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+.dept-dot:hover, .dept-dot:active {
+    width: 14px;
+    height: 14px;
+}
+
+/* ===== ПАНЕЛЬ КОРПУСОВ ===== */
+.buildings-panel {
+    background: #ffffff;
+    border-top: 1px solid #e0e0e0;
+    flex-shrink: 0;
+    overflow: hidden;
+    z-index: 1000;
+    height: 46px;
+}
+
+.panel-header {
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 16px;
+    color: #1a1a2e;
+    border-bottom: 1px solid #e0e0e0;
+    flex-shrink: 0;
+    min-height: 46px;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    font-family: 'Inter', sans-serif;
+}
+.panel-arrow {
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.panel-arrow svg {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.panel-arrow.open svg {
+    transform: rotate(180deg);
+}
+.buildings-list {
+    height: calc(100% - 46px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.building-item {
+    border-bottom: 1px solid #e0e0e0;
+    font-family: 'Inter', sans-serif;
+}
+
+.building-row {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px 20px;
+    cursor: pointer;
+    min-height: 52px;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    font-family: 'Inter', sans-serif;
+}
+.building-row:active { }
+.building-item.selected .building-name { color: #1565C0; }
+
+.building-arrow {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1a1a2e;
+}
+.building-arrow svg {
+    width: 18px;
+    height: 18px;
+    transition: transform 0.3s ease;
+}
+.building-arrow.expanded svg {
+    transform: rotate(90deg);
+}
+
+.depts-container {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.depts-container.expanded { max-height: 300px; }
+
+.dept-item {
+    padding: 10px 20px 10px 68px;
+    font-size: 14px;
+    color: #1a1a2e;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.dept-reset {
+    display: none;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    color: #E53935;
+    cursor: pointer;
+    flex-shrink: 0;
+    line-height: 20px;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+.dept-item.active .dept-reset { display: block; }
+.dept-item.active { background: #E3F2FD; }
+.building-num {
+    width: 34px; height: 34px;
+    background: #ffffff;
+    border-radius: 50%;
+    border: 1px solid #000000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+    color: #000000;
+    flex-shrink: 0;
+    font-family: 'Inter', sans-serif;
+}
+.building-info { flex: 1; min-width: 0; }
+.building-name { font-weight: 600; font-size: 16px; color: #263238; font-family: 'Inter', sans-serif; }
+.building-depts { font-size: 12px; color: #90A4AE; font-family: 'Inter', sans-serif; }
+
+/* ===== ПАНЕЛЬ ПОДСКАЗКИ ===== */
+.hint-panel {
+    background: #ffffff;
+    border-top: 1px solid #e0e0e0;
+    flex-shrink: 0;
+    z-index: 1000;
+}
+.hint-text {
+    padding: 8px 20px;
+    font-size: 13px; color: #1a1a2e;
+    display: flex; align-items: center; gap: 6px;
+    justify-content: space-between;
+    min-height: 38px;
+    font-family: 'Inter', sans-serif;
+}
+.hint-text .emoji {
+    display: inline-block;
+    animation: bounce 1.3s ease-in-out infinite;
+}
+.hint-reset {
+    display: none;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    color: #E53935;
+    cursor: pointer;
+    flex-shrink: 0;
+    line-height: 20px;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(5px); }
+}
+
+body.panel-open .pin-container {
+    transform: translate(-50%, -100%) scale(0.7);
+}
+body.panel-open .pin {
+    animation-name: pin-bounce-small;
+}
+body.panel-open .building-marker {
+    transform: translate(-50%, -50%) scale(0.7);
+}
+body.panel-open .dept-dot {
+}
+
+.route-running {
+    animation: dash-run 1s linear infinite;
+}
+
+.pin-container.route-active .pin { animation: none; }
+
+.start-label {
+    position: absolute;
+    pointer-events: auto;
+    cursor: pointer;
+    z-index: 20;
+}
+.label-dot-inner {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #E53935;
+    border: 2px solid white;
+    z-index: 2;
+    transform: translate(-50%, -50%);
+}
+.label-badge {
+    position: absolute;
+    background: rgba(255,255,255,0.6);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #1a1a2e;
+    text-align: center;
+    border: 0.5px solid rgba(0,0,0,0.08);
+    font-family: 'Inter', sans-serif;
+    white-space: pre-line;
+    z-index: 1;
+}
+.markers-hidden { opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+
+body.panel-open .start-label {
+    display: none;
+}

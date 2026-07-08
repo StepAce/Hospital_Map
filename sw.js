@@ -1,4 +1,5 @@
-var CACHE_NAME = 'hospital-nav-v2';
+// v3: обновлённый кеш — все иконки из /icons/ включены в PRECACHE, офлайн-first стратегия
+var CACHE_NAME = 'hospital-nav-v3';
 
 var PRECACHE = [
   '/',
