@@ -668,23 +668,29 @@ function matInvert3x3(M) {
 
 function computeGeoTransform() {
     var refs = appData.geoRef;
-    if (!refs || refs.length < 3) return;
-    // Строим матрицу M: [lat, lng, 1] для каждой опорной точки
-    var M = refs.map(function(r) { return [r.lat, r.lng, 1]; });
-    var MT = matTranspose(M);           // 3×4
-    var MTM = matMul(MT, M);            // 3×3
-    var MTM_inv = matInvert3x3(MTM);
-    if (!MTM_inv) return;
-    var MTM_inv_MT = matMul(MTM_inv, MT); // 3×4
+    if (!refs || refs.length === 0) return;
+    var ref = refs[0];
+    geoTransform = {
+        refLat: ref.lat,
+        refLng: ref.lng,
+        refX: ref.x,
+        refY: ref.y
+    };
+}
 
-    // Векторы X и Y
-    var X = refs.map(function(r) { return [r.x]; }); // 4×1
-    var Y = refs.map(function(r) { return [r.y]; }); // 4×1
-
-    var Ax = matMul(MTM_inv_MT, X); // 3×1 = [a, b, c]
-    var Ay = matMul(MTM_inv_MT, Y); // 3×1 = [d, e, f]
-
-    geoTransform = [Ax[0][0], Ax[1][0], Ax[2][0], Ay[0][0], Ay[1][0], Ay[2][0]];
+function gpsToPixel(lat, lng) {
+    if (!geoTransform) return null;
+    var cosLat = Math.cos(geoTransform.refLat * Math.PI / 180);
+    var dLat = lat - geoTransform.refLat;
+    var dLng = lng - geoTransform.refLng;
+    var deltaYMeters = dLat * 111132;
+    var deltaXMeters = dLng * 111132 * cosLat;
+    var deltaXPx = deltaXMeters / metersPerPixel;
+    var deltaYPx = deltaYMeters / metersPerPixel;
+    return {
+        x: geoTransform.refX + deltaXPx,
+        y: geoTransform.refY - deltaYPx
+    };
 }
 
 // === GPS-ОПРЕДЕЛЕНИЕ МЕСТОПОЛОЖЕНИЯ ===
@@ -720,13 +726,13 @@ function findNearestLocation(lat, lng) {
     var best = null;
     var bestDist = Infinity;
 
-    // Переводим GPS в пиксельные координаты через аффинное преобразование
+    // Переводим GPS в пиксельные координаты через опорную точку и metersPerPixel
     var px, py;
-    if (geoTransform) {
-        px = geoTransform[0] * lat + geoTransform[1] * lng + geoTransform[2];
-        py = geoTransform[3] * lat + geoTransform[4] * lng + geoTransform[5];
+    var pixel = gpsToPixel(lat, lng);
+    if (pixel) {
+        px = pixel.x;
+        py = pixel.y;
     } else {
-        // Запасной вариант: если geoTransform не вычислился, используем приблизительное масштабирование
         px = lng * 1000;
         py = lat * 1000;
     }

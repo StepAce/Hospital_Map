@@ -386,8 +386,8 @@ body.panel-open .dept-dot {
 }
 .label-dot-inner {
     position: absolute;
-    width: 10px;
-    height: 10px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: #E53935;
     border: 2px solid white;
