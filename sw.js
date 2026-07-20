@@ -1,23 +1,23 @@
-// v4: обновлённый кеш — все иконки из /icons/ включены в PRECACHE, офлайн-first стратегия
-var CACHE_NAME = 'hospital-nav-v4';
+// v6: welcome modal, QR scanner CDN precached
+var CACHE_NAME = 'hospital-nav-v6';
 
 var PRECACHE = [
-  '/',
-  '/hospital-map.html',
-  '/data.json',
-  '/hospital-map.webp',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/icons/hospital.svg',
-  '/icons/chevron-down.svg',
-  '/icons/chevron-right.svg',
-  '/icons/chevron-up.svg',
-  '/icons/chevrons-up.svg',
-  '/icons/download.svg',
-  '/map.js',
-  '/ui.js',
-  '/styles.css'
+  './',
+  'hospital-map.html',
+  'data.json',
+  'hospital-map.webp',
+  'manifest.json',
+  'icon-192.png',
+  'icon-512.png',
+  'icons/chevron-down.svg',
+  'icons/chevron-right.svg',
+  'icons/chevron-up.svg',
+  'icons/chevrons-up.svg',
+  'icons/download.svg',
+  'map.js',
+  'ui.js',
+  'styles.css',
+  'https://unpkg.com/html5-qrcode'
 ];
 
 function preCache(url) {
@@ -69,7 +69,7 @@ self.addEventListener('fetch', function(event) {
         return response;
       }).catch(function() {
         if (event.request.mode === 'navigate') {
-          return caches.match('/hospital-map.html');
+          return caches.match('hospital-map.html');
         }
         return new Response('', { status: 408, statusText: 'Offline' });
       });

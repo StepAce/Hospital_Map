@@ -24,10 +24,7 @@ var hintEmoji = null;
 var hintReset = null;
 // Настройка анимации маршрута: true — бесконечный бегущий пунктир, false — статичный пунктир после прорисовки
 var ANIMATE_ROUTE_INFINITE = true;
-// Аффинное преобразование GPS → пиксели: [a, b, c, d, e, f], где px = a*lat + b*lng + c, py = d*lat + e*lng + f
-var geoTransform = null;
-// ID watchPosition для постоянного GPS-трекинга
-var gpsWatchId = null;
+
 
 // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (нужны до buildGraph) ===
 // getDeptObjects — критический путь: вызывается в buildGraph(), findDeptById(), renderLabels(), handleLabelTarget()
@@ -628,177 +625,6 @@ function escHtml(str) {
     return div.innerHTML;
 }
 
-// === АФФИННОЕ ПРЕОБРАЗОВАНИЕ GPS → ПИКСЕЛИ ===
-
-function matMul(A, B) {
-    var m = A.length, n = B[0].length, p = A[0].length;
-    var C = [];
-    for (var i = 0; i < m; i++) {
-        C[i] = [];
-        for (var j = 0; j < n; j++) {
-            C[i][j] = 0;
-            for (var k = 0; k < p; k++) {
-                C[i][j] += A[i][k] * B[k][j];
-            }
-        }
-    }
-    return C;
-}
-
-function matTranspose(A) {
-    return A[0].map(function(_, c) { return A.map(function(r) { return r[c]; }); });
-}
-
-function matInvert3x3(M) {
-    var a = M[0][0], b = M[0][1], c = M[0][2];
-    var d = M[1][0], e = M[1][1], f = M[1][2];
-    var g = M[2][0], h = M[2][1], i = M[2][2];
-    var det = a*(e*i - f*h) - b*(d*i - f*g) + c*(d*h - e*g);
-    if (Math.abs(det) < 1e-15) return null;
-    var inv = [[0,0,0],[0,0,0],[0,0,0]];
-    inv[0][0] = (e*i - f*h) / det;
-    inv[0][1] = (c*h - b*i) / det;
-    inv[0][2] = (b*f - c*e) / det;
-    inv[1][0] = (f*g - d*i) / det;
-    inv[1][1] = (a*i - c*g) / det;
-    inv[1][2] = (c*d - a*f) / det;
-    inv[2][0] = (d*h - e*g) / det;
-    inv[2][1] = (b*g - a*h) / det;
-    inv[2][2] = (a*e - b*d) / det;
-    return inv;
-}
-
-function computeGeoTransform() {
-    var refs = appData.geoRef;
-    if (!refs || refs.length === 0) return;
-    var ref = refs[0];
-    geoTransform = {
-        refLat: ref.lat,
-        refLng: ref.lng,
-        refX: ref.x,
-        refY: ref.y
-    };
-}
-
-function gpsToPixel(lat, lng) {
-    if (!geoTransform) return null;
-    var cosLat = Math.cos(geoTransform.refLat * Math.PI / 180);
-    var dLat = lat - geoTransform.refLat;
-    var dLng = lng - geoTransform.refLng;
-    var deltaYMeters = dLat * 111132;
-    var deltaXMeters = dLng * 111132 * cosLat;
-    var deltaXPx = deltaXMeters / metersPerPixel;
-    var deltaYPx = deltaYMeters / metersPerPixel;
-    return {
-        x: geoTransform.refX + deltaXPx,
-        y: geoTransform.refY - deltaYPx
-    };
-}
-
-// === GPS-ОПРЕДЕЛЕНИЕ МЕСТОПОЛОЖЕНИЯ ===
-
-function requestGPS() {
-    if (!navigator.geolocation) {
-        alert('\u0412\u0430\u0448 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442 GPS.');
-        return;
-    }
-
-    if (gpsWatchId !== null) {
-        navigator.geolocation.clearWatch(gpsWatchId);
-        gpsWatchId = null;
-        var gpsHint = document.getElementById('gpsHint');
-        if (gpsHint) gpsHint.textContent = '\uD83D\uDCCD \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u043C\u043E\u0451 \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043F\u043E GPS';
-        return;
-    }
-
-    var gpsHint = document.getElementById('gpsHint');
-    if (gpsHint) gpsHint.textContent = '\u23F3 \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u044F\u0435\u043C \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435...';
-
-    gpsWatchId = navigator.geolocation.watchPosition(
-        function(pos) {
-            if (gpsHint) gpsHint.textContent = '\uD83D\uDCCD \u041E\u0442\u0441\u043B\u0435\u0436\u0438\u0432\u0430\u043D\u0438\u0435 GPS \u0430\u043A\u0442\u0438\u0432\u043D\u043E (\u043D\u0430\u0436\u043C\u0438\u0442\u0435 \u0434\u043B\u044F \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u043A\u0438)';
-            var pixel = gpsToPixel(pos.coords.latitude, pos.coords.longitude);
-            if (!pixel || !startPoint) return;
-            var dx = pixel.x - startPoint.x;
-            var dy = pixel.y - startPoint.y;
-            var dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > 5) {
-                findNearestLocation(pos.coords.latitude, pos.coords.longitude);
-            }
-        },
-        function(err) {
-            if (gpsHint) gpsHint.textContent = '\uD83D\uDCCD \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u043C\u043E\u0451 \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043F\u043E GPS';
-            var msg;
-            switch (err.code) {
-                case err.PERMISSION_DENIED: msg = '\u0414\u043E\u0441\u0442\u0443\u043F \u043A GPS \u0437\u0430\u043F\u0440\u0435\u0449\u0451\u043D. \u0420\u0430\u0437\u0440\u0435\u0448\u0438\u0442\u0435 \u0434\u043E\u0441\u0442\u0443\u043F \u0432 \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0430\u0445 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430.'; break;
-                case err.POSITION_UNAVAILABLE: msg = '\u0421\u0438\u0433\u043D\u0430\u043B GPS \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435, \u0447\u0442\u043E \u0433\u0435\u043E\u043B\u043E\u043A\u0430\u0446\u0438\u044F \u0432\u043A\u043B\u044E\u0447\u0435\u043D\u0430.'; break;
-                case err.TIMEOUT: msg = '\u041F\u0440\u0435\u0432\u044B\u0448\u0435\u043D\u043E \u0432\u0440\u0435\u043C\u044F \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u044F GPS. \u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043D\u0430 \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u043C\u0435\u0441\u0442\u043D\u043E\u0441\u0442\u0438.'; break;
-                default: msg = '\u041E\u0448\u0438\u0431\u043A\u0430 \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u0438\u044F \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u044F (\u043A\u043E\u0434 ' + err.code + ').';
-            }
-            alert(msg);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-}
-
-function findNearestLocation(lat, lng) {
-    var best = null;
-    var bestDist = Infinity;
-
-    // Переводим GPS в пиксельные координаты через опорную точку и metersPerPixel
-    var px, py;
-    var pixel = gpsToPixel(lat, lng);
-    if (pixel) {
-        px = pixel.x;
-        py = pixel.y;
-    } else {
-        px = lng * 1000;
-        py = lat * 1000;
-    }
-
-    // Проверяем все startPoints
-    if (appData.startPoints) {
-        appData.startPoints.forEach(function(sp) {
-            var dx = sp.x - px;
-            var dy = sp.y - py;
-            var dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < bestDist) {
-                bestDist = dist;
-                best = { type: 'start', id: sp.id, name: sp.name };
-            }
-        });
-    }
-
-    // Проверяем все департаменты
-    if (appData.buildings) {
-        appData.buildings.forEach(function(b) {
-            var depts = getDeptObjects(b.departments);
-            depts.forEach(function(d) {
-                if (d.x === undefined || d.y === undefined) return;
-                var dx = d.x - px;
-                var dy = d.y - py;
-                var dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < bestDist) {
-                    bestDist = dist;
-                    best = { type: 'dept', id: d.id, name: d.name };
-                }
-            });
-        });
-    }
-
-    if (best) {
-        setStartPoint(best.type, best.id);
-        // Свернуть панель если открыта
-        var panel = document.getElementById('buildingsPanel');
-        if (panel && panel.classList.contains('open')) {
-            document.getElementById('panelHeader').click();
-        }
-        alert('\u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u043E: ' + best.name + '. \u0412\u044B \u0437\u0434\u0435\u0441\u044C?');
-    } else {
-        alert('\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u0431\u043B\u0438\u0436\u0430\u0439\u0448\u0435\u0435 \u043C\u0435\u0441\u0442\u043E.');
-    }
-}
-
 function updateHint() {
     var panel = document.getElementById('buildingsPanel');
     var isPanelOpen = panel.classList.contains('open');
@@ -817,19 +643,13 @@ function updateHint() {
         }
     }
 
-    // Кнопка GPS: только когда КПП по умолчанию
-    var btnGPS = document.getElementById('btnGPS');
-    if (btnGPS) {
-        btnGPS.style.display = isKPP ? 'inline-block' : 'none';
-    }
-
     if (endPoint) {
         hintLabel.textContent = (startPoint ? startPoint.name : '\u0421\u0442\u0430\u0440\u0442') + ' \u2192 ' + endPoint.name;
         hintEmoji.style.display = 'none';
         hintReset.style.display = 'block';
     } else if (isKPP) {
         // КПП по умолчанию, цель не выбрана
-        hintLabel.textContent = '\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0441\u0432\u043E\u0451 \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u0432\u043E \u0432\u043A\u043B\u0430\u0434\u043A\u0435';
+        hintLabel.textContent = '\u041E\u0442\u043A\u0440\u043E\u0439\u0442\u0435 \u0432\u043A\u043B\u0430\u0434\u043A\u0443';
         hintEmoji.style.display = 'inline-block';
         hintReset.style.display = 'none';
     } else if (!isKPP && !endPoint) {
@@ -841,16 +661,9 @@ function updateHint() {
         hintEmoji.style.display = 'inline-block';
         hintReset.style.display = 'none';
     } else {
-        var anyExpanded = document.querySelector('.depts-container.expanded');
-        if (anyExpanded) {
-            hintLabel.textContent = '\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043E\u0442\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u0434\u043B\u044F \u043F\u043E\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u044F \u043C\u0430\u0440\u0448\u0440\u0443\u0442\u0430';
-            hintEmoji.style.display = 'none';
-            hintReset.style.display = 'none';
-        } else {
-            hintLabel.textContent = '\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043A\u043E\u0440\u043F\u0443\u0441';
-            hintEmoji.style.display = 'inline-block';
-            hintReset.style.display = 'none';
-        }
+        hintLabel.textContent = '\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043E\u0442\u0434\u0435\u043B\u0435\u043D\u0438\u0435 \u0434\u043B\u044F \u043F\u043E\u0441\u0442\u0440\u043E\u0435\u043D\u0438\u044F \u043C\u0430\u0440\u0448\u0440\u0443\u0442\u0430';
+        hintEmoji.style.display = 'none';
+        hintReset.style.display = 'none';
     }
 }
 
@@ -869,14 +682,10 @@ function renderBuildingsList() {
             '<div class="building-num">' + b.id + '</div>' +
             '<div class="building-info">' +
                 '<div class="building-name">' + escHtml(b.name) + '</div>' +
-                '<div class="building-depts">' + escHtml(deptNamesRaw.join(', ')) + '</div>' +
-            '</div>' +
-            '<div class="building-arrow">' +
-                '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>' +
             '</div>';
 
         var deptsContainer = document.createElement('div');
-        deptsContainer.className = 'depts-container';
+        deptsContainer.className = 'depts-container expanded';
 
     var deptObjs = getDeptObjects(b.departments);
     if (deptObjs.length) {
@@ -928,45 +737,10 @@ function renderBuildingsList() {
             });
         }
 
-        row.addEventListener('click', function() {
-            var arrowEl = row.querySelector('.building-arrow');
-            var isOpen = deptsContainer.classList.contains('expanded');
-            if (isOpen) {
-                arrowEl.classList.remove('expanded');
-                deptsContainer.classList.remove('expanded');
-            } else {
-                arrowEl.classList.add('expanded');
-                deptsContainer.classList.add('expanded');
-            }
-            updateHint();
-        });
-
         item.appendChild(row);
         item.appendChild(deptsContainer);
         list.appendChild(item);
     });
-}
-
-function collapseAllBuildings() {
-    var expandedContainers = document.querySelectorAll('.depts-container.expanded');
-    expandedContainers.forEach(function(c) {
-        c.classList.remove('expanded');
-        var arrow = c.parentElement.querySelector('.building-arrow');
-        if (arrow) arrow.classList.remove('expanded');
-    });
-    if (expandedContainers.length > 0) updateHint();
-}
-
-function expandBuildingAccordion(buildingId) {
-    var item = document.querySelector('.building-item[data-building-id="' + buildingId + '"]');
-    if (!item) return;
-    var deptsContainer = item.querySelector('.depts-container');
-    var arrowEl = item.querySelector('.building-arrow');
-    if (deptsContainer && !deptsContainer.classList.contains('expanded')) {
-        deptsContainer.classList.add('expanded');
-        if (arrowEl) arrowEl.classList.add('expanded');
-        updateHint();
-    }
 }
 
 function setupPanelToggle() {
@@ -1069,13 +843,6 @@ function setupPanelToggle() {
     
     header.addEventListener('click', function() {
         isPanelOpen = !isPanelOpen;
-
-        if (!isPanelOpen) {
-            collapseAllBuildings();
-        }
-        if (isPanelOpen && endPoint && endPoint.buildingId) {
-            expandBuildingAccordion(endPoint.buildingId);
-        }
 
         var currentHeight = panel.offsetHeight;
         var targetHeight = getTargetHeight(isPanelOpen);
@@ -1185,15 +952,7 @@ async function main() {
         setStartPoint('start', 'qr_gate');
     });
 
-    // GPS-кнопка и строка в панели
-    var btnGPS = document.getElementById('btnGPS');
-    var gpsHint = document.getElementById('gpsHint');
-    if (btnGPS) btnGPS.addEventListener('click', requestGPS);
-    if (gpsHint) gpsHint.addEventListener('click', requestGPS);
-
     await loadData();
-    // Вычисляем аффинное преобразование GPS→пиксели по опорным точкам из geoRef
-    computeGeoTransform();
     // Инициализация startPoint ДО buildGraph — иначе addEdge(startPoint.id) крашнется
     if (!startPoint) {
         var defaultSp = appData.startPoints[0];
@@ -1219,6 +978,7 @@ async function main() {
     renderBuildingsList();
     setupPanelToggle();
     setupResizeHandler();
+    initWelcomeModal();
 
 }
 
@@ -1249,9 +1009,8 @@ main().catch(function(err) {
     console.warn('App load failed:', err.message);
 });
 
-// Service Worker: регистрируется с scope '/' (sw.js лежит в корне, scope определяется по пути скрипта)
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('sw.js')
         .then(function(reg) { console.log('SW registered:', reg.scope); })
         .catch(function(err) { console.warn('SW registration failed:', err); });
 }

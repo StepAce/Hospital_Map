@@ -8,12 +8,37 @@
     <link rel="manifest" href="manifest.json">
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         .dept-item.start-selected { background: #E8F5E9; border-left: 3px solid #4CAF50; }
         .building-item.start-selected .building-name { color: #2E7D32; }
     </style>
 </head>
 <body>
+
+<div class="welcome-overlay" id="welcomeModal">
+    <div class="welcome-card">
+        <button class="welcome-close-btn" id="btnWelcomeClose">&times;</button>
+        <img src="icon-192.png" alt="Логотип" class="welcome-logo-img">
+        <h2 class="welcome-title">ГБУЗ "Инфекционная больница №2"</h2>
+        <p class="welcome-subtitle">Необходимо выбрать начальную точку</p>
+        <div id="qr-reader" class="qr-reader-container"></div>
+        <div class="welcome-actions" id="welcomeActions">
+            <button class="welcome-btn welcome-btn-scan" id="btnScanQR">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
+                Отсканировать QR-код здания
+            </button>
+            <button class="welcome-btn welcome-btn-manual" id="btnManualSelect">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                Выбрать отделение вручную
+            </button>
+        </div>
+        <button class="welcome-btn welcome-btn-cancel" id="btnCancelScan" style="display:none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Отмена
+        </button>
+    </div>
+</div>
 
 <div class="header">
     <div class="header-left">
@@ -35,10 +60,9 @@
 
 <div class="buildings-panel" id="buildingsPanel">
     <div class="panel-header" id="panelHeader">
-        <span><img src="icons/hospital.svg" alt="Корпуса" style="width: 24px; height: 24px; vertical-align: middle; margin-right: 6px;">📍 Где я нахожусь?</span>
+        <span>Выберите своё месторасположение</span>
         <span class="panel-arrow" id="panelArrow"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"/></svg></span>
     </div>
-    <div id="gpsHint" style="padding:8px 20px; font-size:13px; color:#666; cursor:pointer; border-bottom:1px solid #e0e0e0; font-family:'Inter',sans-serif;\">📍 Определить моё местоположение по GPS</div>
     <div class="buildings-list" id="buildingsList"></div>
 </div>
 
@@ -51,7 +75,6 @@
         <span class="emoji" id="hintEmoji"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m17 11-5-5-5 5"/><path d="m17 18-5-5-5 5"/></svg></span>
         <button id="btnChangeStart" style="display:none; background:#fff; border:1px solid #1565C0; color:#1565C0; padding:4px 10px; border-radius:14px; font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap; flex-shrink:0;">✎ Сменить</button>
         <button id="btnResetStart" style="display:none; background:#fff; border:1px solid #e53935; color:#e53935; padding:4px 10px; border-radius:14px; font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap; flex-shrink:0;">↺ КПП</button>
-        <button id="btnGPS" style="display:none; background:#fff; border:1px solid #4CAF50; color:#4CAF50; padding:4px 10px; border-radius:14px; font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; white-space:nowrap; flex-shrink:0;">📍 GPS</button>
         <span class="hint-reset" id="hintReset" style="display:none">&times;</span>
     </div>
 </div>

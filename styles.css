@@ -243,39 +243,15 @@ body {
 .building-row {
     display: flex; align-items: center; gap: 14px;
     padding: 12px 20px;
-    cursor: pointer;
     min-height: 52px;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     font-family: 'Inter', sans-serif;
 }
-.building-row:active { }
 .building-item.selected .building-name { color: #1565C0; }
 
-.building-arrow {
-    flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #1a1a2e;
-}
-.building-arrow svg {
-    width: 18px;
-    height: 18px;
-    transition: transform 0.3s ease;
-}
-.building-arrow.expanded svg {
-    transform: rotate(90deg);
-}
-
 .depts-container {
-    overflow: hidden;
-    max-height: 0;
-    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.depts-container.expanded { max-height: 300px; }
 
 .dept-item {
     padding: 10px 20px 10px 68px;
@@ -321,7 +297,6 @@ body {
 }
 .building-info { flex: 1; min-width: 0; }
 .building-name { font-weight: 600; font-size: 16px; color: #263238; font-family: 'Inter', sans-serif; }
-.building-depts { font-size: 12px; color: #90A4AE; font-family: 'Inter', sans-serif; }
 
 /* ===== ПАНЕЛЬ ПОДСКАЗКИ ===== */
 .hint-panel {
@@ -412,4 +387,115 @@ body.panel-open .dept-dot {
 
 body.panel-open .start-label {
     display: none;
+}
+
+/* ===== WELCOME MODAL ===== */
+.welcome-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(26, 26, 46, 0.85);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+    font-family: 'Inter', sans-serif;
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.welcome-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 32px 24px 24px;
+    width: calc(100% - 40px);
+    max-width: 380px;
+    text-align: center;
+    position: relative;
+    animation: slideUp 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+.welcome-close-btn {
+    position: absolute;
+    top: 12px; right: 16px;
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #90A4AE;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+    font-family: 'Inter', sans-serif;
+}
+.welcome-close-btn:active { color: #1a1a2e; }
+.welcome-logo-img {
+    width: 64px; height: 64px;
+    border-radius: 14px;
+    margin-bottom: 16px;
+}
+.welcome-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 4px;
+    font-family: 'Inter', sans-serif;
+}
+.welcome-subtitle {
+    font-size: 14px;
+    color: #546E7A;
+    margin-bottom: 24px;
+    font-family: 'Inter', sans-serif;
+}
+.welcome-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.welcome-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    font-family: 'Inter', sans-serif;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.welcome-btn:active { transform: scale(0.97); }
+.welcome-btn-scan {
+    background: #1565C0;
+    color: #ffffff;
+}
+.welcome-btn-manual {
+    background: #ffffff;
+    color: #1a1a2e;
+    border: 2px solid #e0e0e0;
+}
+.welcome-btn-cancel {
+    background: #ffffff;
+    color: #E53935;
+    border: 2px solid #E53935;
+}
+.qr-reader-container {
+    display: none;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto 20px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 2px solid #e0e0e0;
+}
+.qr-reader-container video {
+    width: 100%;
+    border-radius: 12px;
 }
