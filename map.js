@@ -26,6 +26,8 @@ var hintReset = null;
 var ANIMATE_ROUTE_INFINITE = true;
 // Аффинное преобразование GPS → пиксели: [a, b, c, d, e, f], где px = a*lat + b*lng + c, py = d*lat + e*lng + f
 var geoTransform = null;
+// ID watchPosition для постоянного GPS-трекинга
+var gpsWatchId = null;
 
 // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (нужны до buildGraph) ===
 // getDeptObjects — критический путь: вызывается в buildGraph(), findDeptById(), renderLabels(), handleLabelTarget()
@@ -700,12 +702,29 @@ function requestGPS() {
         alert('\u0412\u0430\u0448 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442 GPS.');
         return;
     }
+
+    if (gpsWatchId !== null) {
+        navigator.geolocation.clearWatch(gpsWatchId);
+        gpsWatchId = null;
+        var gpsHint = document.getElementById('gpsHint');
+        if (gpsHint) gpsHint.textContent = '\uD83D\uDCCD \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u043C\u043E\u0451 \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043F\u043E GPS';
+        return;
+    }
+
     var gpsHint = document.getElementById('gpsHint');
     if (gpsHint) gpsHint.textContent = '\u23F3 \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u044F\u0435\u043C \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435...';
-    navigator.geolocation.getCurrentPosition(
+
+    gpsWatchId = navigator.geolocation.watchPosition(
         function(pos) {
-            if (gpsHint) gpsHint.textContent = '\uD83D\uDCCD \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u043C\u043E\u0451 \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043F\u043E GPS';
-            findNearestLocation(pos.coords.latitude, pos.coords.longitude);
+            if (gpsHint) gpsHint.textContent = '\uD83D\uDCCD \u041E\u0442\u0441\u043B\u0435\u0436\u0438\u0432\u0430\u043D\u0438\u0435 GPS \u0430\u043A\u0442\u0438\u0432\u043D\u043E (\u043D\u0430\u0436\u043C\u0438\u0442\u0435 \u0434\u043B\u044F \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u043A\u0438)';
+            var pixel = gpsToPixel(pos.coords.latitude, pos.coords.longitude);
+            if (!pixel || !startPoint) return;
+            var dx = pixel.x - startPoint.x;
+            var dy = pixel.y - startPoint.y;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > 5) {
+                findNearestLocation(pos.coords.latitude, pos.coords.longitude);
+            }
         },
         function(err) {
             if (gpsHint) gpsHint.textContent = '\uD83D\uDCCD \u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0438\u0442\u044C \u043C\u043E\u0451 \u043C\u0435\u0441\u0442\u043E\u043F\u043E\u043B\u043E\u0436\u0435\u043D\u0438\u0435 \u043F\u043E GPS';
@@ -718,7 +737,7 @@ function requestGPS() {
             }
             alert(msg);
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
 }
 

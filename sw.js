@@ -1,5 +1,5 @@
-// v3: обновлённый кеш — все иконки из /icons/ включены в PRECACHE, офлайн-first стратегия
-var CACHE_NAME = 'hospital-nav-v3';
+// v4: обновлённый кеш — все иконки из /icons/ включены в PRECACHE, офлайн-first стратегия
+var CACHE_NAME = 'hospital-nav-v4';
 
 var PRECACHE = [
   '/',
@@ -14,7 +14,10 @@ var PRECACHE = [
   '/icons/chevron-right.svg',
   '/icons/chevron-up.svg',
   '/icons/chevrons-up.svg',
-  '/icons/download.svg'
+  '/icons/download.svg',
+  '/map.js',
+  '/ui.js',
+  '/styles.css'
 ];
 
 function preCache(url) {
