@@ -1,5 +1,5 @@
 // v6: welcome modal, QR scanner CDN precached
-var CACHE_NAME = 'hospital-nav-v6';
+var CACHE_NAME = 'hospital-nav-v99';
 
 var PRECACHE = [
   './',
