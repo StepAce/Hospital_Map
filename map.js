@@ -365,7 +365,7 @@ function renderBuildingMarkers() {
         dot.textContent = b.id;
         dot.style.left = (b.x * scale) + 'px';
         dot.style.top = (b.y * scale) + 'px';
-        dot.addEventListener('click', function() { openPanelForBuilding(b.id); });
+        // dot.addEventListener('click', function() { openPanelForBuilding(b.id); });
         layer.appendChild(dot);
         buildingMarkerEls[b.id] = dot;
     });

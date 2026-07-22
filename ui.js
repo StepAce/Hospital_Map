@@ -18,10 +18,15 @@ function initWelcomeModal() {
     var qrReader = document.getElementById('qr-reader');
 
     function hideModal() {
-        modal.style.display = 'none';
+        modal.classList.add('hiding');
+        setTimeout(function() {
+            modal.style.display = 'none';
+            modal.classList.remove('hiding');
+        }, 300);
     }
 
     function showModal() {
+        modal.classList.remove('hiding');
         modal.style.display = 'flex';
     }
 
@@ -38,6 +43,7 @@ function initWelcomeModal() {
     }
 
     function onScanSuccess(decodedText) {
+        clearRoute();
         stopScanner();
         hideModal();
         actions.style.display = '';
@@ -51,6 +57,7 @@ function initWelcomeModal() {
         } else {
             setStartPoint('start', id);
         }
+        centerOnStartPoint();
     }
 
     function onScanError(err) {
