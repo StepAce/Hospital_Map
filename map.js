@@ -386,7 +386,15 @@ function setStartPoint(type, id) {
         var b = findBuildingById(parseInt(id));
         if (b) sp = { id: 'B' + b.id, type: 'building', x: b.x, y: b.y, name: b.name, buildingId: b.id };
     }
-    if (!sp) return;
+    if (!sp) {
+        var defaultSp = appData.startPoints[0];
+        if (defaultSp) {
+            sp = { id: defaultSp.id, type: 'start', x: defaultSp.x, y: defaultSp.y, name: defaultSp.name };
+            alert('\u0422\u043E\u0447\u043A\u0430 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430. \u0412\u044B\u0431\u0440\u0430\u043D\u0430 \u0442\u043E\u0447\u043A\u0430 \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E.');
+        } else {
+            return;
+        }
+    }
     startPoint = sp;
     // Сохраняем в localStorage для восстановления при следующем запуске
     try {
@@ -866,23 +874,16 @@ function setupPanelToggle() {
 function handleQRParam() {
     var params = new URLSearchParams(window.location.search);
 
-    // ?start= — новый параметр: устанавливает startPoint (dept_id, start_id, или building_id)
-    var startVal = params.get('start');
-    if (startVal) {
-        if (String(startVal).indexOf('D') === 0) {
-            setStartPoint('dept', startVal.substring(1));
-        } else if (String(startVal).indexOf('B') === 0) {
-            setStartPoint('building', startVal.substring(1));
-        } else {
-            setStartPoint('start', startVal);
-        }
-        return;
-    }
+    // ?start= / ?qr= / ?node= — универсальный параметр установки startPoint
+    var scannedId = (params.get('start') || params.get('qr') || params.get('node') || '').trim();
+    if (!scannedId) return;
 
-    // ?qr= — старый параметр (обратная совместимость)
-    var qrVal = params.get('qr');
-    if (qrVal) {
-        setStartPoint('start', qrVal);
+    if (String(scannedId).indexOf('D') === 0) {
+        setStartPoint('dept', scannedId.substring(1));
+    } else if (String(scannedId).indexOf('B') === 0) {
+        setStartPoint('building', scannedId.substring(1));
+    } else {
+        setStartPoint('start', scannedId);
     }
 }
 

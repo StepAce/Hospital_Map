@@ -43,21 +43,23 @@ function initWelcomeModal() {
     }
 
     function onScanSuccess(decodedText) {
-        clearRoute();
         stopScanner();
         hideModal();
         actions.style.display = '';
         btnCancel.style.display = 'none';
 
         var id = decodedText.trim();
-        if (String(id).indexOf('D') === 0) {
-            setStartPoint('dept', id.substring(1));
-        } else if (String(id).indexOf('B') === 0) {
-            setStartPoint('building', id.substring(1));
-        } else {
-            setStartPoint('start', id);
-        }
-        centerOnStartPoint();
+        setTimeout(function() {
+            clearRoute();
+            if (String(id).indexOf('D') === 0) {
+                setStartPoint('dept', id.substring(1));
+            } else if (String(id).indexOf('B') === 0) {
+                setStartPoint('building', id.substring(1));
+            } else {
+                setStartPoint('start', id);
+            }
+            centerOnStartPoint();
+        }, 300);
     }
 
     function onScanError(err) {
