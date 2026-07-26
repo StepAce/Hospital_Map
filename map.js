@@ -25,6 +25,16 @@ var hintReset = null;
 // Настройка анимации маршрута: true — бесконечный бегущий пунктир, false — статичный пунктир после прорисовки
 var ANIMATE_ROUTE_INFINITE = true;
 
+// Настройки визуального скругления линии маршрута
+var ROUTE_LINE_CONFIG = {
+    curveTension: 0.3,
+    lineJoin: 'round',
+    lineCap: 'round'
+};
+console.log('ROUTE_LINE_CONFIG:', ROUTE_LINE_CONFIG);
+// GPS-привязка: опорная точка и ID трекинга
+var geoTransform = null;
+var gpsWatchId = null;
 
 // === ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ (нужны до buildGraph) ===
 // getDeptObjects — критический путь: вызывается в buildGraph(), findDeptById(), renderLabels(), handleLabelTarget()
@@ -36,10 +46,119 @@ function getDeptObjects(raw) {
 
 // === ЗАГРУЗКА ДАННЫХ ===
 async function loadData() {
-    var resp = await fetch('data.json');
-    if (!resp.ok) throw new Error('Не удалось загрузить data.json');
+    // Пробуем свежую версию, при ошибке — из кэша SW
+    var resp;
+    try {
+        resp = await fetch('data.json?v=' + Date.now());
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    } catch(e1) {
+        try {
+            resp = await fetch('data.json');
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        } catch(e2) {
+            throw new Error('Не удалось загрузить data.json');
+        }
+    }
     appData = await resp.json();
     metersPerPixel = appData.config.metersPerPixel;
+    console.log('Успешно загружен appData:', appData);
+}
+
+// Авто-генерация стартовых точек из массива зданий и отделений
+function autoGenerateStartPoints() {
+    if (!appData.buildings || !appData.buildings.length) return;
+    if (!appData.startPoints || !appData.startPoints.length) {
+        appData.startPoints = [];
+        appData.buildings.forEach(function(b) {
+            // QR-точка здания
+            appData.startPoints.push({
+                id: 'qr_' + b.id,
+                name: 'QR ' + b.name,
+                x: b.x,
+                y: b.y
+            });
+            // QR-точки для каждого отделения внутри здания
+            var depts = getDeptObjects(b.departments);
+            depts.forEach(function(d) {
+                if (d.x === undefined || d.y === undefined) return;
+                appData.startPoints.push({
+                    id: 'qr_' + d.id,
+                    name: d.name.replace(/\n/g, ' '),
+                    x: d.x,
+                    y: d.y
+                });
+            });
+        });
+        console.log('Сгенерировано стартовых точек:', appData.startPoints.length);
+        buildGraph();
+        console.log('Граф перестроен с ' + appData.startPoints.length + ' startPoints и авто-привязками');
+    }
+}
+
+// === GPS: ОПОРНАЯ ТОЧКА И ПЕРЕВОД КООРДИНАТ ===
+function computeGeoTransform() {
+    if (!appData || !appData.geoRef || !appData.geoRef.length) return;
+    var ref = appData.geoRef[0];
+    geoTransform = { refLat: ref.lat, refLng: ref.lng, refX: ref.x, refY: ref.y };
+}
+
+function gpsToPixel(lat, lng) {
+    if (!geoTransform) return null;
+    var cosLat = Math.cos(geoTransform.refLat * Math.PI / 180);
+    var dLat = lat - geoTransform.refLat;
+    var dLng = lng - geoTransform.refLng;
+    var deltaXMeters = dLng * 111132 * cosLat;
+    var deltaYMeters = dLat * 111132;
+    var deltaXPx = deltaXMeters / metersPerPixel;
+    var deltaYPx = deltaYMeters / metersPerPixel;
+    return { x: geoTransform.refX + deltaXPx, y: geoTransform.refY - deltaYPx };
+}
+
+function findNearestLocation(lat, lng) {
+    var px, py;
+    var pixel = gpsToPixel(lat, lng);
+    if (pixel) { px = pixel.x; py = pixel.y; }
+    else { px = lng * 1000; py = lat * 1000; }
+
+    var best = null, bestDist = Infinity;
+    if (appData.startPoints) appData.startPoints.forEach(function(sp) {
+        var d = Math.hypot(sp.x - px, sp.y - py);
+        if (d < bestDist) { bestDist = d; best = { type: 'start', id: sp.id, name: sp.name }; }
+    });
+    if (appData.buildings) appData.buildings.forEach(function(b) {
+        var depts = getDeptObjects(b.departments);
+        depts.forEach(function(d) {
+            if (d.x === undefined || d.y === undefined) return;
+            var d2 = Math.hypot(d.x - px, d.y - py);
+            if (d2 < bestDist) { bestDist = d2; best = { type: 'dept', id: d.id, name: d.name }; }
+        });
+    });
+    if (best) {
+        setStartPoint(best.type, best.id);
+        alert('\u041E\u043F\u0440\u0435\u0434\u0435\u043B\u0435\u043D\u043E: ' + best.name + '. \u0412\u044B \u0437\u0434\u0435\u0441\u044C?');
+    }
+}
+
+function requestGPS() {
+    if (!navigator.geolocation) return;
+    if (gpsWatchId !== null) {
+        navigator.geolocation.clearWatch(gpsWatchId);
+        gpsWatchId = null;
+        return;
+    }
+    gpsWatchId = navigator.geolocation.watchPosition(
+        function(pos) {
+            var pixel = gpsToPixel(pos.coords.latitude, pos.coords.longitude);
+            if (pixel && startPoint) {
+                var d = Math.hypot(pixel.x - startPoint.x, pixel.y - startPoint.y);
+                if (d > 5) findNearestLocation(pos.coords.latitude, pos.coords.longitude);
+            } else {
+                findNearestLocation(pos.coords.latitude, pos.coords.longitude);
+            }
+        },
+        function(err) { alert('\u041E\u0448\u0438\u0431\u043A\u0430 GPS: ' + (err.message || '\u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D')); },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
 }
 
 // === ПОСТРОЕНИЕ ГРАФА ===
@@ -82,14 +201,25 @@ function buildGraph() {
                         graph[w.id] = {};
                     }
                 });
-
-                addEdge(startPoint.id, wpts[0].id);
-
                 for (var i = 0; i < wpts.length - 1; i++) {
                     addEdge(wpts[i].id, wpts[i + 1].id);
                 }
 
                 addEdge(wpts[wpts.length - 1].id, deptKey);
+
+                var firstWpt = wpts[0].id;
+                var hasEdge = false;
+                var edges = (appData.graph && appData.graph.edges) ? appData.graph.edges : [];
+                for (var e = 0; e < edges.length; e++) {
+                    var edge = edges[e];
+                    var f = Array.isArray(edge) ? edge[0] : edge.from;
+                    var t = Array.isArray(edge) ? edge[1] : edge.to;
+                    if (f === firstWpt || t === firstWpt) { hasEdge = true; break; }
+                }
+
+                if (!hasEdge && appData.startPoints && appData.startPoints.length) {
+                    addEdge(appData.startPoints[0].id, firstWpt);
+                }
             }
         });
     });
@@ -105,14 +235,60 @@ function buildGraph() {
 
     if (appData.graph && appData.graph.edges) {
         appData.graph.edges.forEach(function(e) {
-            addEdge(e[0], e[1]);
+            // Поддержка двух форматов: массивы ["A","B"] и объекты {from:"A",to:"B"}
+            if (Array.isArray(e)) {
+                addEdge(e[0], e[1]);
+            } else if (e.from && e.to) {
+                addEdge(e.from, e.to);
+            }
         });
     }
+
+    // Авто-привязка каждой стартовой точки к графу дорог
+    if (appData.startPoints) {
+        appData.startPoints.forEach(function(sp) {
+            var targets = [], method = '';
+            if (sp.entryW) {
+                if (Array.isArray(sp.entryW)) {
+                    targets = sp.entryW.filter(function(wId) { return allNodes[wId] && allNodes[wId].isWaypoint; });
+                    method = 'entryW[' + targets.length + ']';
+                } else if (allNodes[sp.entryW] && allNodes[sp.entryW].isWaypoint) {
+                    targets = [sp.entryW];
+                    method = 'entryW';
+                }
+            }
+            if (!targets.length) {
+                var bestW = null, bestD = Infinity;
+                Object.keys(allNodes).forEach(function(k) {
+                    var n = allNodes[k];
+                    if (!n.isWaypoint) return;
+                    var d = Math.hypot(n.x - sp.x, n.y - sp.y);
+                    if (d < bestD) { bestD = d; bestW = k; }
+                });
+                if (bestW) { targets = [bestW]; method = 'nearest (' + (bestD * (appData.config.metersPerPixel || 0.25)).toFixed(1) + 'm)'; }
+            }
+            targets.forEach(function(wId) {
+                addEdge(sp.id, wId);
+            });
+            if (targets.length) {
+                console.log('Привязка ' + (sp.name || sp.id) + ': через ' + method + ' -> ' + targets.join(', '));
+            }
+        });
+    }
+
+    console.log('ИТОГОВЫЙ ГРАФ СВЯЗЕЙ:', graph);
+    console.log('Связи для qr_1001:', graph['qr_1001']);
+    console.log('Связи для qr_101:', graph['qr_101']);
+    console.log('Всего startPoints:', appData.startPoints ? appData.startPoints.length : 0);
+    console.log('Всего waypoints в allNodes:', Object.keys(allNodes).filter(function(k) { return allNodes[k].isWaypoint; }).length);
 }
 
 // === АЛГОРИТМ ДЕЙКСТРЫ ===
 function findPath(fromKey, toKey) {
-    if (!allNodes[fromKey] || !allNodes[toKey]) return null;
+    if (!allNodes[fromKey] || !allNodes[toKey]) {
+        console.warn('findPath: узел не найден', { from: fromKey, to: toKey, fromExists: !!allNodes[fromKey], toExists: !!allNodes[toKey] });
+        return null;
+    }
     var dist = {}, prev = {};
     Object.keys(allNodes).forEach(function(k) { dist[k] = Infinity; });
     dist[fromKey] = 0;
@@ -133,11 +309,39 @@ function findPath(fromKey, toKey) {
             });
         }
     }
-    if (dist[toKey] === Infinity) return null;
+    if (dist[toKey] === Infinity) {
+        console.warn('findPath: путь не найден (нет рёбер между узлами)', { from: fromKey, to: toKey, graphFrom: graph[fromKey], graphTo: graph[toKey] });
+        return null;
+    }
     var path = [toKey];
     var cur = toKey;
     while (cur !== fromKey) { cur = prev[cur]; path.unshift(cur); }
     return { nodes: path, distance: dist[toKey] };
+}
+
+function findNearestWaypoint(x, y) {
+    var best = null, bestDist = Infinity;
+    Object.keys(allNodes).forEach(function(id) {
+        var n = allNodes[id];
+        if (!n) return;
+        var dx = n.x - x, dy = n.y - y;
+        var d = Math.sqrt(dx * dx + dy * dy);
+        if (d < bestDist) { bestDist = d; best = id; }
+    });
+    return best;
+}
+
+function findPathSnapped(fromX, fromY, toX, toY) {
+    var fromW = findNearestWaypoint(fromX, fromY);
+    var toW = findNearestWaypoint(toX, toY);
+    if (!fromW || !toW) return null;
+    var result = findPath(fromW, toW);
+    if (!result) return null;
+    result.nodes.unshift('_from');
+    result.nodes.push('_to');
+    allNodes['_from'] = { x: fromX, y: fromY, isVirtual: true };
+    allNodes['_to'] = { x: toX, y: toY, isVirtual: true };
+    return result;
 }
 
 // === ИНИЦИАЛИЗАЦИЯ КАРТЫ ===
@@ -155,7 +359,7 @@ function initMap() {
         img.onerror = function() {
             reject(new Error('Не удалось загрузить изображение карты'));
         };
-        img.src = cfg.mapImage;
+        img.src = (cfg && cfg.mapImage) || 'hospital-map.webp';
     });
 }
 
@@ -168,6 +372,17 @@ function applyScale(forceWidthMode) {
     var naturalWidth = img.naturalWidth;
     var naturalHeight = img.naturalHeight;
     
+    if (!startPoint) {
+        scale = 1;
+        mapSizes = { totalWidth: naturalWidth, totalHeight: naturalHeight };
+        wrapper.style.height = naturalHeight + 'px';
+        img.style.width = naturalWidth + 'px';
+        img.style.height = naturalHeight + 'px';
+        var ml = document.getElementById('markersLayer');
+        ml.style.width = naturalWidth + 'px';
+        ml.style.height = naturalHeight + 'px';
+        return;
+    }
     var sp = allNodes[startPoint.id];
     var anchorX = sp ? sp.x * scale : 0;
 
@@ -238,11 +453,12 @@ function findBuildingById(id) {
 function renderMarkers() {
     var markersLayer = document.getElementById('markersLayer');
 
-    // Булавка в координатах startPoint (не жёстко КПП)
     var container = document.createElement('div');
     container.className = 'pin-container';
-    container.style.left = (startPoint.x * scale + PIN_OFFSET_X) + 'px';
-    container.style.top = (startPoint.y * scale - PIN_OFFSET_Y) + 'px';
+    if (startPoint) {
+        container.style.left = (startPoint.x * scale + PIN_OFFSET_X) + 'px';
+        container.style.top = (startPoint.y * scale - PIN_OFFSET_Y) + 'px';
+    }
 
     var pinWrap = document.createElement('div');
     pinWrap.className = 'pin';
@@ -320,7 +536,19 @@ function renderLabels() {
         container.appendChild(badge);
 
         if (lbl.target) {
-            container.addEventListener('click', function() {
+            container.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                handleLabelTarget(lbl.target);
+            });
+            dot.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                handleLabelTarget(lbl.target);
+            });
+            badge.addEventListener('click', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
                 handleLabelTarget(lbl.target);
             });
         }
@@ -331,16 +559,21 @@ function renderLabels() {
 }
 
 function handleLabelTarget(target) {
-    var deptId = parseInt(target);
-    if (!isNaN(deptId)) {
-        var bld = findBuildingByDeptId(deptId);
-        if (bld) {
-            var deptName = '';
-            var depts = getDeptObjects(bld.departments);
-            var found = depts.find(function(d) { return d.id === deptId; });
-            if (found) deptName = found.name;
-            setRoute(bld.id, deptId, deptName);
+    console.log('handleLabelTarget вызван с target:', target);
+
+    var deptId;
+    if (typeof target === 'object' && target !== null) {
+        if (target.deptId !== undefined) {
+            deptId = parseInt(target.deptId);
+        } else if (target.id !== undefined) {
+            deptId = parseInt(target.id);
         }
+    } else {
+        deptId = parseInt(target);
+    }
+
+    if (!isNaN(deptId)) {
+        setEndPoint('dept', deptId);
     }
 }
 
@@ -375,6 +608,17 @@ function renderBuildingMarkers() {
 
 // Установка стартовой точки (откуда идём)
 function setStartPoint(type, id) {
+    // КПП всегда привязывается к QR-точке отделения 1001
+    var numericId = parseInt(id);
+    if (id === 'qr_gate' || id === 'D1001' || numericId === 1001) {
+        type = 'start';
+        id = 'qr_1001';
+    }
+    // Администрация всегда привязывается к QR-точке отделения 102
+    if (id === 'qr_admin' || id === 'D102' || numericId === 102) {
+        type = 'start';
+        id = 'qr_102';
+    }
     var sp = null;
     if (type === 'start') {
         sp = appData.startPoints.find(function(p) { return p.id === String(id); });
@@ -390,7 +634,7 @@ function setStartPoint(type, id) {
         var defaultSp = appData.startPoints[0];
         if (defaultSp) {
             sp = { id: defaultSp.id, type: 'start', x: defaultSp.x, y: defaultSp.y, name: defaultSp.name };
-            alert('\u0422\u043E\u0447\u043A\u0430 \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u0430. \u0412\u044B\u0431\u0440\u0430\u043D\u0430 \u0442\u043E\u0447\u043A\u0430 \u043F\u043E \u0443\u043C\u043E\u043B\u0447\u0430\u043D\u0438\u044E.');
+            console.warn('Точка не найдена (' + type + '/' + id + '). Выбрана точка по умолчанию: ' + defaultSp.name);
         } else {
             return;
         }
@@ -408,15 +652,8 @@ function setStartPoint(type, id) {
     updateDeptItemsActive();
     updateBuildingsListSelection();
     updateHint();
-    // Перестроить маршрут если цель уже выбрана и граф построен
-    if (endPoint && Object.keys(graph).length > 0) {
-        var result = findPath(startPoint.id, endPoint.id);
-        if (result) {
-            lastRouteNodeIds = result.nodes;
-            drawRouteLine(result.nodes, false);
-            if (startPinEl) startPinEl.classList.add('route-active');
-        }
-    }
+    // При смене старта — сбросить маршрут к цели, пользователь выбирает новую
+    clearRoute();
 }
 
 // Установка целевой точки (куда идём)
@@ -437,10 +674,10 @@ function setEndPoint(type, id) {
         var b = findBuildingById(bid);
         if (b) ep = { id: 'B' + b.id, type: 'building', x: b.x, y: b.y, name: b.name, buildingId: b.id };
     }
-    if (!ep) return;
+    if (!ep || !startPoint) return;
     endPoint = ep;
 
-    var result = findPath(startPoint.id, endPoint.id);
+    var result = findPathSnapped(startPoint.x, startPoint.y, ep.x, ep.y);
     if (!result) return;
 
     lastRouteNodeIds = result.nodes;
@@ -448,6 +685,7 @@ function setEndPoint(type, id) {
     updateBuildingsListSelection();
     scrollToRoute(result.nodes);
     drawRouteLine(result.nodes, false);
+    repositionMarkers();
     updateHint();
     if (startPinEl) startPinEl.classList.add('route-active');
 }
@@ -491,7 +729,7 @@ function scrollToRoute(nodeIds) {
 
 function buildSmoothPathData(nodeIds) {
     if (nodeIds.length < 2) return '';
-    var CURVE = 0.25;
+    var CURVE = ROUTE_LINE_CONFIG.curveTension;
     var pts = nodeIds.map(function(id) {
         var n = allNodes[id];
         return { x: n.x * scale, y: n.y * scale };
@@ -529,6 +767,7 @@ function drawRouteLine(nodeIds, skipAnimation) {
     clearRouteLine();
 
     var markersLayer = document.getElementById('markersLayer');
+    markersLayer.classList.remove('markers-hidden');
     var svgNS = 'http://www.w3.org/2000/svg';
     var svg = document.createElementNS(svgNS, 'svg');
     svg.setAttribute('id', 'routeSvg');
@@ -538,7 +777,7 @@ function drawRouteLine(nodeIds, skipAnimation) {
     svg.style.width = '100%';
     svg.style.height = '100%';
     svg.style.pointerEvents = 'none';
-    svg.style.zIndex = '10';
+    svg.style.zIndex = '5';
 
     var d = buildSmoothPathData(nodeIds);
 
@@ -546,14 +785,13 @@ function drawRouteLine(nodeIds, skipAnimation) {
     path.setAttribute('d', d);
     path.setAttribute('fill', 'none');
     path.setAttribute('stroke', '#E53935');
-    path.setAttribute('stroke-width', '3.5');
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('stroke-linejoin', 'round');
+    path.setAttribute('stroke-width', '4');
+    path.setAttribute('stroke-linecap', ROUTE_LINE_CONFIG.lineCap);
+    path.setAttribute('stroke-linejoin', ROUTE_LINE_CONFIG.lineJoin);
+    path.setAttribute('opacity', '1');
 
     if (skipAnimation) {
         path.setAttribute('stroke-dasharray', '8 6');
-        path.setAttribute('opacity', '0.9');
-        // Бегущий пунктир только если ANIMATE_ROUTE_INFINITE = true
         if (ANIMATE_ROUTE_INFINITE) path.classList.add('route-running');
         svg.appendChild(path);
         markersLayer.appendChild(svg);
@@ -567,9 +805,9 @@ function drawRouteLine(nodeIds, skipAnimation) {
         maskLine.setAttribute('d', d);
         maskLine.setAttribute('fill', 'none');
         maskLine.setAttribute('stroke', 'white');
-        maskLine.setAttribute('stroke-width', '3.5');
-        maskLine.setAttribute('stroke-linecap', 'round');
-        maskLine.setAttribute('stroke-linejoin', 'round');
+        maskLine.setAttribute('stroke-width', '4');
+        maskLine.setAttribute('stroke-linecap', ROUTE_LINE_CONFIG.lineCap);
+        maskLine.setAttribute('stroke-linejoin', ROUTE_LINE_CONFIG.lineJoin);
         mask.appendChild(maskLine);
         defs.appendChild(mask);
         svg.appendChild(defs);
@@ -709,19 +947,8 @@ function renderBuildingsList() {
             deptItem.addEventListener('click', function(e) {
                 if (e.target.classList.contains('dept-reset')) return;
                 e.stopPropagation();
-                // Клик по отделению → установить startPoint
                 if (dept.id && dept.x !== undefined) {
-                    // Если уже здесь — предупредить
-                    if (startPoint && startPoint.type === 'dept' && startPoint.deptId === dept.id) {
-                        alert('\u0412\u044B \u0443\u0436\u0435 \u043D\u0430\u0445\u043E\u0434\u0438\u0442\u0435\u0441\u044C \u0437\u0434\u0435\u0441\u044C. \u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0446\u0435\u043B\u044C \u043D\u0430 \u043A\u0430\u0440\u0442\u0435.');
-                        return;
-                    }
                     setStartPoint('dept', dept.id);
-                    // Свернуть панель
-                    var panel = document.getElementById('buildingsPanel');
-                    if (panel.classList.contains('open')) {
-                        document.getElementById('panelHeader').click();
-                    }
                 }
             });
                 deptsContainer.appendChild(deptItem);
@@ -813,7 +1040,7 @@ function setupPanelToggle() {
             // При открытии — перепозиционируем маркеры, при закрытии — пропускаем (скрыты через markers-hidden)
             if (targetOpen) repositionMarkers();
             if (!targetOpen && scrollContainer) {
-                var targetCenter = allNodes[startPoint.id] ? allNodes[startPoint.id].x : (savedCenter || 0);
+                var targetCenter = (startPoint && allNodes[startPoint.id]) ? allNodes[startPoint.id].x : (savedCenter || 0);
                 var lerpedCenter = savedCenter + (targetCenter - savedCenter) * easedProgress;
                 scrollContainer.scrollLeft = Math.max(0, lerpedCenter * scale - scrollContainer.clientWidth / 2);
             } else if (targetOpen && scrollContainer) {
@@ -889,20 +1116,24 @@ function handleQRParam() {
 
 // === ПЕРЕРАСЧЁТ ПРИ ИЗМЕНЕНИИ РАЗМЕРА ОКНА ===
 function recalculateLayout() {
-    var img = document.getElementById('mapImage');
-    var panel = document.getElementById('buildingsPanel');
-    
-    if (!img || !img.naturalWidth) return;
+    try {
+        var img = document.getElementById('mapImage');
+        var panel = document.getElementById('buildingsPanel');
+        
+        if (!img || !img.naturalWidth) return;
 
-    var isPanelOpen = panel.classList.contains('open');
-    var savedCenter = scrollContainer ? (scrollContainer.scrollLeft + scrollContainer.clientWidth / 2) / (scale || 1) : null;
-    applyScale(isPanelOpen);
-    repositionMarkers();
-    if (scrollContainer && savedCenter !== null) {
-        scrollContainer.scrollLeft = Math.max(0, savedCenter * scale - scrollContainer.clientWidth / 2);
-    }
-    if (lastRouteNodeIds) {
-        updateRoutePathData(lastRouteNodeIds);
+        var isPanelOpen = panel.classList.contains('open');
+        var savedCenter = scrollContainer ? (scrollContainer.scrollLeft + scrollContainer.clientWidth / 2) / (scale || 1) : null;
+        applyScale(isPanelOpen);
+        repositionMarkers();
+        if (scrollContainer && savedCenter !== null) {
+            scrollContainer.scrollLeft = Math.max(0, savedCenter * scale - scrollContainer.clientWidth / 2);
+        }
+        if (lastRouteNodeIds) {
+            updateRoutePathData(lastRouteNodeIds);
+        }
+    } catch(e) {
+        console.warn('recalculateLayout: ошибка пересчёта раскладки', e);
     }
 }
 
@@ -920,7 +1151,7 @@ function setupResizeHandler() {
 
 // === ЦЕНТРИРОВАНИЕ ПО ТОЧКЕ СТАРТА ===
 function centerOnStartPoint() {
-    if (!scrollContainer || !mapSizes) return;
+    if (!scrollContainer || !mapSizes || !startPoint) return;
     var node = allNodes[startPoint.id];
     if (!node) return;
     var centerX = node.x * scale;
@@ -954,6 +1185,8 @@ async function main() {
     });
 
     await loadData();
+    try { computeGeoTransform(); } catch(e) { console.warn('computeGeoTransform: ошибка', e); }
+    autoGenerateStartPoints();
     // Инициализация startPoint ДО buildGraph — иначе addEdge(startPoint.id) крашнется
     if (!startPoint) {
         var defaultSp = appData.startPoints[0];
@@ -971,6 +1204,11 @@ async function main() {
             } catch(e) { localStorage.removeItem('savedStartPoint'); }
         }
     }
+    // При загрузке без URL-параметров — строго старт от КПП
+    var initParams = new URLSearchParams(window.location.search);
+    if (!initParams.get('qr') && !initParams.get('start') && !initParams.get('node')) {
+        setStartPoint('start', 'qr_gate');
+    }
     await initMap();
     centerOnStartPoint();
     renderMarkers();
@@ -980,7 +1218,51 @@ async function main() {
     setupPanelToggle();
     setupResizeHandler();
     initWelcomeModal();
+    renderDebugOverlay();
 
+}
+
+// === ОТЛАДОЧНАЯ ВИЗУАЛИЗАЦИЯ ГРАФА ===
+function renderDebugOverlay() {
+    var old = document.getElementById('debugOverlay');
+    if (old) old.remove();
+    var ml = document.getElementById('markersLayer');
+    var ns = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('id', 'debugOverlay');
+    svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:150;opacity:0.8;';
+
+    // Рёбра из appData.graph.edges
+    if (appData.graph && appData.graph.edges) {
+        appData.graph.edges.forEach(function(e) {
+            var a = allNodes[e[0]], b = allNodes[e[1]];
+            if (!a || !b) return;
+            var line = document.createElementNS(ns, 'line');
+            line.setAttribute('x1', a.x * scale); line.setAttribute('y1', a.y * scale);
+            line.setAttribute('x2', b.x * scale); line.setAttribute('y2', b.y * scale);
+            line.setAttribute('stroke', '#90CAF9'); line.setAttribute('stroke-width', '1.5');
+            svg.appendChild(line);
+        });
+    }
+
+    // Waypoints (W)
+    if (appData.waypoints) {
+        appData.waypoints.forEach(function(w) {
+            var cx = w.x * scale, cy = w.y * scale;
+            var g = document.createElementNS(ns, 'g');
+            var c = document.createElementNS(ns, 'circle');
+            c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', '4');
+            c.setAttribute('fill', '#42A5F5'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', '0.8');
+            g.appendChild(c);
+            var t = document.createElementNS(ns, 'text');
+            t.setAttribute('x', cx + 5); t.setAttribute('y', cy - 4);
+            t.setAttribute('fill', '#1565C0'); t.setAttribute('font-size', '9'); t.setAttribute('font-weight', '700');
+            t.textContent = w.id; g.appendChild(t);
+            svg.appendChild(g);
+        });
+    }
+
+    ml.appendChild(svg);
 }
 
 // === УСТАНОВКА PWA (устаревшее событие beforeinstallprompt) ===
@@ -1002,11 +1284,10 @@ document.getElementById('installBtn').addEventListener('click', function() {
 
 // === ЗАПУСК ПРИЛОЖЕНИЯ ===
 main().catch(function(err) {
-    var offlineNotice = document.getElementById('offlineNotice');
-    if (offlineNotice) {
-        offlineNotice.style.display = 'block';
+    if (err.message.indexOf('Не удалось загрузить') !== -1 || !navigator.onLine) {
+        var offlineNotice = document.getElementById('offlineNotice');
+        if (offlineNotice) offlineNotice.style.display = 'block';
     }
-    // Не затираем карту — она может быть закеширована
     console.warn('App load failed:', err.message);
 });
 
@@ -1032,3 +1313,4 @@ if ('serviceWorker' in navigator) {
         window.location.reload();
     });
 }
+

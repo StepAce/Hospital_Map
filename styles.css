@@ -167,7 +167,7 @@ body {
     transform: translate(-50%, -50%);
     transition: transform 0.35s ease;
     -webkit-tap-highlight-color: transparent;
-    pointer-events: none;
+    pointer-events: auto !important;
     user-select: none;
 }
 
@@ -356,9 +356,9 @@ body.panel-open .dept-dot {
 
 .start-label {
     position: absolute;
-    pointer-events: auto;
+    pointer-events: auto !important;
     cursor: pointer;
-    z-index: 20;
+    z-index: 25;
 }
 .label-dot-inner {
     position: absolute;
@@ -369,6 +369,8 @@ body.panel-open .dept-dot {
     border: 2px solid white;
     z-index: 2;
     transform: translate(-50%, -50%);
+    pointer-events: auto !important;
+    cursor: pointer;
 }
 .label-badge {
     position: absolute;
@@ -383,6 +385,8 @@ body.panel-open .dept-dot {
     font-family: 'Inter', sans-serif;
     white-space: pre-line;
     z-index: 1;
+    pointer-events: auto !important;
+    cursor: pointer;
 }
 .markers-hidden { opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 

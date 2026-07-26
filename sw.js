@@ -1,5 +1,5 @@
-// v6: welcome modal, QR scanner CDN precached
-var CACHE_NAME = 'hospital-nav-v99';
+// v999: стабильный офлайн-режим, очистка кэша data.json
+var CACHE_NAME = 'hospital-nav-v999';
 
 var PRECACHE = [
   './',
