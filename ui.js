@@ -48,15 +48,20 @@ function initWelcomeModal() {
         actions.style.display = '';
         btnCancel.style.display = 'none';
 
-        var id = decodedText.trim();
+        var textToParse = decodedText.trim();
+        if (textToParse.indexOf('?') !== -1) {
+            var urlParams = new URLSearchParams(textToParse.split('?')[1]);
+            var param = urlParams.get('start') || urlParams.get('qr') || urlParams.get('node');
+            if (param) textToParse = param;
+        }
         setTimeout(function() {
             clearRoute();
-            if (String(id).indexOf('D') === 0) {
-                setStartPoint('dept', id.substring(1));
-            } else if (String(id).indexOf('B') === 0) {
-                setStartPoint('building', id.substring(1));
+            if (textToParse.indexOf('D') === 0) {
+                setStartPoint('dept', textToParse.substring(1));
+            } else if (textToParse.indexOf('B') === 0) {
+                setStartPoint('building', textToParse.substring(1));
             } else {
-                setStartPoint('start', id);
+                setStartPoint('start', textToParse);
             }
             centerOnStartPoint();
         }, 300);

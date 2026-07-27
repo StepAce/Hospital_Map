@@ -1251,7 +1251,7 @@ function renderDebugOverlay() {
             var cx = w.x * scale, cy = w.y * scale;
             var g = document.createElementNS(ns, 'g');
             var c = document.createElementNS(ns, 'circle');
-            c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', '4');
+            c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', '7');
             c.setAttribute('fill', '#42A5F5'); c.setAttribute('stroke', '#fff'); c.setAttribute('stroke-width', '0.8');
             g.appendChild(c);
             var t = document.createElementNS(ns, 'text');
