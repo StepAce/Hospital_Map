@@ -1,9 +1,8 @@
-// v999: стабильный офлайн-режим, очистка кэша data.json
-var CACHE_NAME = 'hospital-nav-v999';
+// v1: переименование hospital-map.html -> index.html, ignoreSearch для query-параметров
+var CACHE_NAME = 'hospital-nav-v1';
 
 var PRECACHE = [
   './',
-  'hospital-map.html',
   'data.json',
   'hospital-map.webp',
   'manifest.json',
@@ -56,7 +55,7 @@ self.addEventListener('fetch', function(event) {
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    caches.match(event.request).then(function(cached) {
+    caches.match(event.request, { ignoreSearch: true }).then(function(cached) {
       if (cached) return cached;
       return fetch(event.request).then(function(response) {
         if (!response || response.status !== 200 || response.type !== 'basic') {
@@ -69,7 +68,7 @@ self.addEventListener('fetch', function(event) {
         return response;
       }).catch(function() {
         if (event.request.mode === 'navigate') {
-          return caches.match('hospital-map.html');
+          return caches.match('./');
         }
         return new Response('', { status: 408, statusText: 'Offline' });
       });

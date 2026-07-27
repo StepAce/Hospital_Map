@@ -1218,7 +1218,7 @@ async function main() {
     setupPanelToggle();
     setupResizeHandler();
     initWelcomeModal();
-    renderDebugOverlay();
+    // renderDebugOverlay();
 
 }
 

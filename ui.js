@@ -113,6 +113,14 @@ function initWelcomeModal() {
     });
 
     showModal();
+
+    var btnHeaderQR = document.getElementById('btnHeaderQR');
+    if (btnHeaderQR) {
+        btnHeaderQR.addEventListener('click', function() {
+            showModal();
+            btnScan.click();
+        });
+    }
 }
 
 // === END WELCOME MODAL ===

@@ -2,7 +2,7 @@
   "name": "Навигация ГБУЗ «Инфекционная больница №2»",
   "short_name": "Навигация ИБ_№2",
   "description": "Навигационная карта ГБУЗ «Инфекционная больница №2»",
-  "start_url": "./hospital-map.html",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#00dcd2",

@@ -61,6 +61,31 @@ body {
     font-weight: 500;
     font-family: 'Inter', sans-serif;
 }
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.btn-qr {
+    background: #ffffff;
+    color: #1a1a2e;
+    border: 1px solid #1a1a2e;
+    padding: 6px 10px;
+    border-radius: 30px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-family: 'Inter', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    aspect-ratio: 1;
+}
+.btn-qr:active { transform: scale(0.96); }
 .btn-install {
     background: #ffffff;
     color: #1a1a2e;
@@ -83,6 +108,7 @@ body {
     .hospital-name { font-size: 14px; }
     .subtitle { font-size: 10px; }
     .btn-install { padding: 6px 12px; font-size: 11px; }
+    .btn-qr { padding: 6px 8px; min-width: 32px; }
     .header { padding: 6px 10px; }
 }
 
