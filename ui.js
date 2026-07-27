@@ -7,8 +7,6 @@ var html5QrCode = null;
 
 function initWelcomeModal() {
     var params = new URLSearchParams(window.location.search);
-    if (params.get('start')) return;
-
     var modal = document.getElementById('welcomeModal');
     var btnClose = document.getElementById('btnWelcomeClose');
     var btnScan = document.getElementById('btnScanQR');
@@ -112,7 +110,9 @@ function initWelcomeModal() {
         btnCancel.style.display = 'none';
     });
 
-    showModal();
+    if (!params.get('start')) {
+        showModal();
+    }
 
     var btnHeaderQR = document.getElementById('btnHeaderQR');
     if (btnHeaderQR) {

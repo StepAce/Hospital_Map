@@ -1192,7 +1192,7 @@ async function main() {
         var defaultSp = appData.startPoints[0];
         if (defaultSp) startPoint = { id: defaultSp.id, type: 'start', x: defaultSp.x, y: defaultSp.y, name: defaultSp.name };
     }
-    handleQRParam();
+    try { handleQRParam(); } catch(e) { console.error('handleQRParam error:', e); }
     buildGraph();
     // Восстановление startPoint из localStorage (только если URL-параметр не переопределил)
     if (startPoint && startPoint.id === 'qr_gate') {
@@ -1205,10 +1205,12 @@ async function main() {
         }
     }
     // При загрузке без URL-параметров — строго старт от КПП
-    var initParams = new URLSearchParams(window.location.search);
-    if (!initParams.get('qr') && !initParams.get('start') && !initParams.get('node')) {
-        setStartPoint('start', 'qr_gate');
-    }
+    try {
+        var initParams = new URLSearchParams(window.location.search);
+        if (!initParams.get('qr') && !initParams.get('start') && !initParams.get('node')) {
+            setStartPoint('start', 'qr_gate');
+        }
+    } catch(e) { console.error('initParams error:', e); }
     await initMap();
     centerOnStartPoint();
     renderMarkers();

@@ -1,5 +1,5 @@
-// v1: переименование hospital-map.html -> index.html, ignoreSearch для query-параметров
-var CACHE_NAME = 'hospital-nav-v1';
+// v1001: фикс зависания приветственного окна при ?start=, try/catch для URL-параметров
+var CACHE_NAME = 'hospital-nav-v1001';
 
 var PRECACHE = [
   './',
