@@ -167,6 +167,7 @@
           "y": 495,
           "label_x": 1206,
           "label_y": 454,
+          "align": "top-left",
           "entryW": "W19"
         },
         {
@@ -176,6 +177,7 @@
           "y": 394,
           "label_x": 1370,
           "label_y": 350,
+          "align": "top-left",
           "entryW": "W41"
         },
         {
@@ -185,6 +187,7 @@
           "y": 527,
           "label_x": 1470,
           "label_y": 490,
+          "align": "top-left",
           "entryW": "W40"
         },
         {
@@ -194,6 +197,7 @@
           "y": 605,
           "label_x": 1500,
           "label_y": 641,
+          "align": "top-right",
           "entryW": "W39"
         },
         {
@@ -203,6 +207,7 @@
           "y": 182,
           "label_x": 1126,
           "label_y": 145,
+          "align": "top-left",
           "entryW": "W24"
         },
         {
@@ -212,6 +217,7 @@
           "y": 191,
           "label_x": 933,
           "label_y": 177,
+          "align": "top-right",
           "entryW": "W22"
         }
       ]
@@ -229,6 +235,7 @@
           "y": 288,
           "label_x": 970,
           "label_y": 304,
+          "align": "top-right",
           "entryW": "W15"
         }
       ]
@@ -246,6 +253,7 @@
           "y": 201,
           "label_x": 1357,
           "label_y": 143,
+          "align": "top-left",
           "entryW": "W27"
         },
         {
@@ -255,6 +263,7 @@
           "y": 201,
           "label_x": 1520,
           "label_y": 170,
+          "align": "bottom-right",
           "entryW": "W27"
         }
       ]
@@ -272,6 +281,7 @@
           "y": 502,
           "label_x": 670,
           "label_y": 540,
+          "align": "bottom-left",
           "entryW": "W10"
         }
       ]
@@ -289,6 +299,7 @@
           "y": 461,
           "label_x": 1880,
           "label_y": 513,
+          "align": "top-left",
           "entryW": "W34"
         },
         {
@@ -298,6 +309,7 @@
           "y": 601,
           "label_x": 1700,
           "label_y": 570,
+          "align": "top-left",
           "entryW": "W36"
         }
       ]
@@ -305,8 +317,8 @@
     {
       "id": 6,
       "name": "Диагностический корпус",
-      "x": 997,
-      "y": 501,
+      "x": 950,
+      "y": 460,
       "departments": [
         {
           "id": 601,
@@ -315,6 +327,7 @@
           "y": 419,
           "label_x": 996,
           "label_y": 369,
+          "align": "top-left",
           "entryW": "W17"
         },
         {
@@ -324,6 +337,7 @@
           "y": 516,
           "label_x": 1070,
           "label_y": 468,
+          "align": "top-right",
           "entryW": "W18"
         },
         {
@@ -333,6 +347,7 @@
           "y": 516,
           "label_x": 1130,
           "label_y": 571,
+          "align": "bottom-right",
           "entryW": "W18"
         },
         {
@@ -342,6 +357,7 @@
           "y": 479,
           "label_x": 822,
           "label_y": 511,
+          "align": "top-right",
           "entryW": "W7"
         }
       ]
@@ -359,6 +375,7 @@
           "y": 93,
           "label_x": 1600,
           "label_y": 75,
+          "align": "top-right",
           "entryW": "W29"
         }
       ]
@@ -371,11 +388,12 @@
       "departments": [
         {
           "id": 801,
-          "name": "Патолого-анатомический\nкорпус",
+          "name": "Патолого-анатомич.\nкорпус",
           "x": 1782,
           "y": 165,
           "label_x": 1870,
           "label_y": 125,
+          "align": "top-left",
           "entryW": "W30"
         }
       ]
@@ -393,6 +411,7 @@
           "y": 254,
           "label_x": 279,
           "label_y": 282,
+          "align": "top-right",
           "entryW": "W14"
         }
       ]
@@ -410,6 +429,7 @@
           "y": 696,
           "label_x": 1342,
           "label_y": 728,
+          "align": "top-right",
           "entryW": [
             "W1",
             "W42"

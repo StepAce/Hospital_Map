@@ -445,6 +445,26 @@ function repositionMarkers() {
     });
 }
 
+function updateActiveStartLabel() {
+    labelEls.forEach(function(item) {
+        item.el.classList.remove('is-active-start');
+    });
+    if (!startPoint) return;
+    var deptId = null;
+    if (startPoint.type === 'dept') {
+        deptId = startPoint.deptId;
+    } else if (startPoint.type === 'start') {
+        var m = String(startPoint.id).match(/\d+$/);
+        if (m) deptId = parseInt(m[0], 10);
+    }
+    if (deptId === null) return;
+    labelEls.forEach(function(item) {
+        if (item.data.target === String(deptId)) {
+            item.el.classList.add('is-active-start');
+        }
+    });
+}
+
 function findBuildingById(id) {
     return appData.buildings.find(function(b) { return b.id === id; });
 }
@@ -501,7 +521,8 @@ function renderLabels() {
                     label_y: ly,
                     dot_x: d.x,
                     dot_y: d.y,
-                    target: String(d.id)
+                    target: String(d.id),
+                    align: d.align || 'top-left'
                 });
             });
         });
@@ -523,16 +544,12 @@ function renderLabels() {
         dot.className = 'label-dot-inner';
         container.appendChild(dot);
 
-        // Текстовая плашка смещена на (label_x - dot_x, label_y - dot_y)
-        var offsetX = (lbl.label_x - lbl.dot_x) * scale;
-        var offsetY = (lbl.label_y - lbl.dot_y) * scale;
         var badge = document.createElement('span');
         badge.className = 'label-badge';
-        badge.textContent = lbl.text.replace(/\n/g, ' ');
+        var formattedText = lbl.text.replace(/\s*(\d+\s*этаж)/i, '\n$1');
+        badge.textContent = formattedText;
         badge.style.position = 'absolute';
-        badge.style.left = offsetX + 'px';
-        badge.style.top = offsetY + 'px';
-        badge.style.transform = 'translate(-50%, -50%)';
+        badge.classList.add('badge-align-' + lbl.align);
         container.appendChild(badge);
 
         if (lbl.target) {
@@ -647,6 +664,7 @@ function setStartPoint(type, id) {
             id: startPoint.type === 'dept' ? startPoint.deptId : startPoint.id
         }));
     } catch(e) { /* localStorage недоступен */ }
+    updateActiveStartLabel();
     repositionMarkers();
     centerOnStartPoint();
     updateDeptItemsActive();
@@ -762,6 +780,44 @@ var lastRouteNodeIds = null;
 var routeSvgEl = null;
 var routePathEl = null;
 var routeAnimId = null;
+var routeGradientEl = null;
+
+function applyRouteGradient(nodeIds) {
+    var svgNS = 'http://www.w3.org/2000/svg';
+    var grad = routeGradientEl;
+    if (!grad && routeSvgEl) {
+        var defs = routeSvgEl.querySelector('defs');
+        if (!defs) {
+            defs = document.createElementNS(svgNS, 'defs');
+            routeSvgEl.insertBefore(defs, routeSvgEl.firstChild);
+        }
+        grad = document.createElementNS(svgNS, 'linearGradient');
+        grad.setAttribute('id', 'routeGradient');
+        grad.setAttribute('gradientUnits', 'userSpaceOnUse');
+        var stops = [
+            { offset: '0%', color: '#007aff' },
+            { offset: '30%', color: '#8b5cf6' },
+            { offset: '60%', color: '#ef4444' },
+            { offset: '100%', color: '#ef4444' }
+        ];
+        stops.forEach(function(st) {
+            var s = document.createElementNS(svgNS, 'stop');
+            s.setAttribute('offset', st.offset);
+            s.setAttribute('stop-color', st.color);
+            grad.appendChild(s);
+        });
+        defs.appendChild(grad);
+        routeGradientEl = grad;
+    }
+    if (!grad || !nodeIds || nodeIds.length < 2) return;
+    var s = allNodes[nodeIds[0]];
+    var e = allNodes[nodeIds[nodeIds.length - 1]];
+    if (!s || !e) return;
+    grad.setAttribute('x1', (s.x * scale));
+    grad.setAttribute('y1', (s.y * scale));
+    grad.setAttribute('x2', (e.x * scale));
+    grad.setAttribute('y2', (e.y * scale));
+}
 
 function drawRouteLine(nodeIds, skipAnimation) {
     clearRouteLine();
@@ -797,6 +853,8 @@ function drawRouteLine(nodeIds, skipAnimation) {
         markersLayer.appendChild(svg);
         routeSvgEl = svg;
         routePathEl = path;
+        applyRouteGradient(nodeIds);
+        path.setAttribute('stroke', 'url(#routeGradient)');
     } else {
         var defs = document.createElementNS(svgNS, 'defs');
         var mask = document.createElementNS(svgNS, 'mask');
@@ -817,6 +875,9 @@ function drawRouteLine(nodeIds, skipAnimation) {
         svg.appendChild(path);
         markersLayer.appendChild(svg);
         routeSvgEl = svg;
+        routePathEl = path;
+        applyRouteGradient(nodeIds);
+        path.setAttribute('stroke', 'url(#routeGradient)');
 
         requestAnimationFrame(function() {
             var totalLen = maskLine.getTotalLength();
@@ -855,12 +916,14 @@ function clearRouteLine() {
     }
     routeSvgEl = null;
     routePathEl = null;
+    routeGradientEl = null;
 }
 
 function updateRoutePathData(nodeIds) {
     if (!routePathEl) return;
     var d = buildSmoothPathData(nodeIds);
     routePathEl.setAttribute('d', d);
+    applyRouteGradient(nodeIds);
 }
 
 // === ИНТЕРФЕЙС: подсказка, список корпусов, панель (вызываются из main()) ===
@@ -1215,6 +1278,7 @@ async function main() {
     centerOnStartPoint();
     renderMarkers();
     renderLabels();
+    updateActiveStartLabel();
     renderBuildingMarkers();
     renderBuildingsList();
     setupPanelToggle();

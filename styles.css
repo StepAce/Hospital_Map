@@ -149,6 +149,7 @@ body {
     transform: translate(-50%, -100%);
     transform-origin: bottom center;
     transition: transform 0.35s ease;
+    display: none !important;
 }
 .pin {
     position: absolute;
@@ -392,27 +393,113 @@ body.panel-open .dept-dot {
     height: 16px;
     border-radius: 50%;
     background: #E53935;
-    border: 2px solid white;
+    border: 1px solid white;
     z-index: 2;
     transform: translate(-50%, -50%);
     pointer-events: auto !important;
     cursor: pointer;
 }
+
+/* Акцент на текущем отделении: синий круг с волной + пульсация плашки */
+.start-label.is-active-start .label-dot,
+.start-label.is-active-start .label-dot-inner,
+.start-label.is-active-start .entry-point-dot {
+    background: #007aff !important;
+    box-shadow: 0 0 0 0px #ffffff !important;
+}
+
+.start-label.is-active-start .label-dot::before,
+.start-label.is-active-start .label-dot-inner::before,
+.start-label.is-active-start .entry-point-dot::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: 50%;
+    background: rgba(0, 123, 255, 0.7);
+    animation: radarWave 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    z-index: -1;
+}
+
+.start-label.is-active-start .label-badge {
+    box-shadow: 0 0 0 1px #0a0000 !important;
+    animation: none !important;
+}
+
+@keyframes radarWave {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(3.2); opacity: 0; }
+}
+
+@keyframes badgePulse {
+    0%, 100% { box-shadow: 0 0 0 1.5px #007aff; }
+    50% { box-shadow: 0 0 0 2.5px #007aff; }
+}
+
 .label-badge {
     position: absolute;
     background: rgba(255,255,255,0.6);
-    padding: 2px 8px;
-    border-radius: 6px;
+    padding: 3px 6px;
+    border-radius: 8px;
     font-size: 11px;
+    line-height: 1.2;
     font-weight: 500;
     color: #1a1a2e;
     text-align: center;
-    border: 0.5px solid rgba(0,0,0,0.08);
+    border: 0px solid rgba(0,0,0,0.08);
+    box-shadow: 0 0 0 0.8px #0a0000;
     font-family: 'Inter', sans-serif;
     white-space: pre-line;
     z-index: 1;
     pointer-events: auto !important;
     cursor: pointer;
+}
+.badge-align-top-left {
+    bottom: 2px;
+    left: 2px;
+    transform: none;
+    white-space: pre-line;
+    text-align: center;
+    width: max-content;
+    max-width: 135px;
+    min-width: 45px;
+    hyphens: auto;
+    word-break: normal;
+}
+.badge-align-top-right {
+    bottom: 2px;
+    right: 2px;
+    transform: none;
+    white-space: pre-line;
+    text-align: center;
+    width: max-content;
+    max-width: 135px;
+    min-width: 45px;
+    hyphens: auto;
+    word-break: normal;
+}
+.badge-align-bottom-left {
+    top: 2px;
+    left: 2px;
+    transform: none;
+    white-space: pre-line;
+    text-align: center;
+    width: max-content;
+    max-width: 135px;
+    min-width: 45px;
+    hyphens: auto;
+    word-break: normal;
+}
+.badge-align-bottom-right {
+    top: 2px;
+    right: 2px;
+    transform: none;
+    white-space: pre-line;
+    text-align: center;
+    width: max-content;
+    max-width: 135px;
+    min-width: 45px;
+    hyphens: auto;
+    word-break: normal;
 }
 .markers-hidden { opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 
