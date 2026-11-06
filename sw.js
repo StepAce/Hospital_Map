@@ -1,5 +1,5 @@
-// v1001: фикс зависания приветственного окна при ?start=, try/catch для URL-параметров
-var CACHE_NAME = 'hospital-nav-v1018';
+// v1019: theme_color манифеста, viewport-fit=cover и safe-area для нижней системной панели
+var CACHE_NAME = 'hospital-nav-v1019';
 
 var PRECACHE = [
   './',
