@@ -3,6 +3,19 @@
 
 var html5QrCode = null;
 
+// При переходе по QR (?start=/?qr=/?node=) сразу прячем welcome-модалку,
+// чтобы она не мелькала и не перекрывала карту до инициализации.
+(function hideWelcomeForQRParam() {
+    var p = new URLSearchParams(window.location.search);
+    if (p.get('start') || p.get('qr') || p.get('node')) {
+        var m = document.getElementById('welcomeModal');
+        if (m) {
+            m.style.display = 'none';
+            m.classList.remove('hiding');
+        }
+    }
+})();
+
 // === WELCOME MODAL ===
 
 // Временная плашка (toast) «Вы находитесь в: ...» при QR-переходе
@@ -10,7 +23,7 @@ function showStartToast(name) {
     var toast = document.getElementById('toast');
     var toastText = document.getElementById('toastText');
     if (!toast || !toastText || !name) return;
-    toastText.textContent = 'Вы находитесь в: ' + name;
+    toastText.textContent = name;
     toast.classList.add('show');
     clearTimeout(toast._timer);
     toast._timer = setTimeout(function() {
@@ -125,6 +138,8 @@ function initWelcomeModal() {
 
     var startParam = params.get('start') || params.get('qr') || params.get('node');
     if (startParam) {
+        modal.style.display = 'none';
+        modal.classList.remove('hiding');
         showStartToast(resolveStartName(startParam));
     } else {
         showModal();

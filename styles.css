@@ -638,16 +638,22 @@ body.panel-open .start-label {
     bottom: 90px;
     transform: translateX(-50%) translateY(10px);
     max-width: calc(100% - 40px);
-    background: #1a1a2e;
-    color: #ffffff;
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 6px;
+    background: #ffffff;
+    color: #1a1a2e;
     padding: 14px 22px;
-    border-radius: 14px;
+    border-radius: 16px;
+    border: 1px solid #e0e0e0;
     font-family: 'Inter', sans-serif;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 500;
     line-height: 1.4;
     text-align: center;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14), 0 2px 8px rgba(0, 0, 0, 0.06);
     opacity: 0;
     pointer-events: none;
     z-index: 9000;
@@ -656,4 +662,12 @@ body.panel-open .start-label {
 .toast.show {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+}
+.toast .toast-label {
+    color: #1a1a2e;
+    font-weight: 500;
+}
+.toast .toast-name {
+    color: #1565C0;
+    font-weight: 700;
 }

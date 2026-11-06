@@ -1,5 +1,5 @@
-// v1022: toast "Вы находитесь в: ..." вместо welcome-модалки при ?start=/?qr=/?node=
-var CACHE_NAME = 'hospital-nav-v1022';
+// v1023: гарантированное скрытие welcome-модалки при QR-переходе + светлый toast в стиле приложения
+var CACHE_NAME = 'hospital-nav-v1023';
 
 var PRECACHE = [
   './',
