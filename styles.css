@@ -630,3 +630,30 @@ body.panel-open .start-label {
     width: 100%;
     border-radius: 12px;
 }
+
+/* ===== TOAST ===== */
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 90px;
+    transform: translateX(-50%) translateY(10px);
+    max-width: calc(100% - 40px);
+    background: #1a1a2e;
+    color: #ffffff;
+    padding: 14px 22px;
+    border-radius: 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    text-align: center;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9000;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}

@@ -1,5 +1,5 @@
-// v1021: theme_color белый — системная зона внизу сливается с белой нижней панелью
-var CACHE_NAME = 'hospital-nav-v1021';
+// v1022: toast "Вы находитесь в: ..." вместо welcome-модалки при ?start=/?qr=/?node=
+var CACHE_NAME = 'hospital-nav-v1022';
 
 var PRECACHE = [
   './',

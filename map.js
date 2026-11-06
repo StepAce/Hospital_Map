@@ -501,6 +501,32 @@ function findDeptById(deptId) {
     return null;
 }
 
+function normalizeName(name) {
+    if (!name) return null;
+    return String(name).replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// Резолвер названия точки старта по ID из URL (?start=/?qr=/?node=)
+function resolveStartName(rawId) {
+    var id = String(rawId || '').trim();
+    var num = null;
+    if (id.indexOf('qr_') === 0) {
+        num = id.substring(3);
+    } else if (id.indexOf('D') === 0) {
+        num = id.substring(1);
+    } else if (id.indexOf('B') === 0) {
+        var b = findBuildingById(parseInt(id.substring(1), 10));
+        return b ? normalizeName(b.name) : null;
+    }
+    if (num !== null) {
+        var dept = findDeptById(parseInt(num, 10));
+        if (dept) return normalizeName(dept.name);
+        var bld = findBuildingById(parseInt(num, 10));
+        if (bld) return normalizeName(bld.name);
+    }
+    return startPoint ? normalizeName(startPoint.name) : null;
+}
+
 function renderLabels() {
     var layer = document.getElementById('markersLayer');
     labelEls = [];

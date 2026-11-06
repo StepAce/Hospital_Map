@@ -5,6 +5,19 @@ var html5QrCode = null;
 
 // === WELCOME MODAL ===
 
+// Временная плашка (toast) «Вы находитесь в: ...» при QR-переходе
+function showStartToast(name) {
+    var toast = document.getElementById('toast');
+    var toastText = document.getElementById('toastText');
+    if (!toast || !toastText || !name) return;
+    toastText.textContent = 'Вы находитесь в: ' + name;
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(function() {
+        toast.classList.remove('show');
+    }, 2600);
+}
+
 function initWelcomeModal() {
     var params = new URLSearchParams(window.location.search);
     var modal = document.getElementById('welcomeModal');
@@ -110,7 +123,10 @@ function initWelcomeModal() {
         btnCancel.style.display = 'none';
     });
 
-    if (!params.get('start')) {
+    var startParam = params.get('start') || params.get('qr') || params.get('node');
+    if (startParam) {
+        showStartToast(resolveStartName(startParam));
+    } else {
         showModal();
     }
 
