@@ -1,5 +1,5 @@
-// v1029: отладочный лог #debug-log для диагностики последовательности центрирования карты
-var CACHE_NAME = 'hospital-nav-v1029';
+// v1030: recalculateLayout больше не центрирует карту, debounce resize 200мс, центрирование только в img.onload
+var CACHE_NAME = 'hospital-nav-v1030';
 
 var PRECACHE = [
   './',

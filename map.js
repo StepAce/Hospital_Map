@@ -1,16 +1,6 @@
 // map.js — логика карты и маршрутов
 'use strict';
 
-// Отладочный лог на экран (для диагностики на телефоне без консоли)
-function debugLog(msg) {
-    var el = document.getElementById('debug-log');
-    if (!el) return;
-    var line = document.createElement('div');
-    line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
-    el.appendChild(line);
-    el.scrollTop = el.scrollHeight;
-}
-
 // === СОСТОЯНИЕ ===
 var deferredPrompt = null;
 var appData = null;
@@ -365,9 +355,7 @@ function initMap() {
         function onReady() {
             if (ready) return;
             ready = true;
-            debugLog("Картинка загружена (onload)");
             recalculateLayout();
-            debugLog("Вызов center из initMap (onload)");
             centerOnStartPoint();
             resolve();
         }
@@ -711,7 +699,6 @@ function setStartPoint(type, id) {
     } catch(e) { /* localStorage недоступен */ }
     updateActiveStartLabel();
     repositionMarkers();
-    debugLog("Вызов center из setStartPoint");
     centerOnStartPoint();
     updateDeptItemsActive();
     updateBuildingsListSelection();
@@ -773,7 +760,6 @@ function clearRoute() {
     updateDeptItemsActive();
     updateBuildingsListSelection();
     if (scrollContainer) {
-        debugLog("Вызов center из clearRoute");
         centerOnStartPoint();
     }
 }
@@ -1177,7 +1163,6 @@ function setupPanelToggle() {
                     // Показываем маркеры после завершения анимации закрытия
                     if (markersLayer) markersLayer.classList.remove('markers-hidden');
                     repositionMarkers();
-                    debugLog("Вызов center из setupPanelToggle (закрытие панели)");
                     centerOnStartPoint();
                     if (lastRouteNodeIds) { drawRouteLine(lastRouteNodeIds, true); }
                 }
@@ -1237,12 +1222,7 @@ function recalculateLayout() {
         var savedCenter = scrollContainer ? (scrollContainer.scrollLeft + scrollContainer.clientWidth / 2) / (scale || 1) : null;
         applyScale(isPanelOpen);
         repositionMarkers();
-        // Если старт выбран и маршрут не строится — центрируемся на стартовой метке,
-        // а не восстанавливаем старое положение скролла (иначе карта улетает влево).
-        if (startPoint && !lastRouteNodeIds) {
-            debugLog("Вызов center из recalculateLayout");
-            centerOnStartPoint();
-        } else if (scrollContainer && savedCenter !== null) {
+        if (scrollContainer && savedCenter !== null) {
             scrollContainer.scrollLeft = Math.max(0, savedCenter * scale - scrollContainer.clientWidth / 2);
         }
         if (lastRouteNodeIds) {
@@ -1256,9 +1236,8 @@ function recalculateLayout() {
 function setupResizeHandler() {
     var resizeTimeout;
     function onResize() {
-        debugLog("Событие resize!");
         clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(recalculateLayout, 50);
+        resizeTimeout = setTimeout(recalculateLayout, 200);
     }
     if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', onResize);
@@ -1344,7 +1323,6 @@ async function main() {
     var mapWrapperEl = document.getElementById('mapWrapper');
     if (preloader) preloader.classList.add('hidden');
     if (mapWrapperEl) mapWrapperEl.classList.add('map-ready');
-    debugLog("Прелоадер скрыт");
 
 }
 
