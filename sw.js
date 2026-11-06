@@ -1,5 +1,5 @@
-// v1031: флаг isInitialLoad — recalculateLayout не восстанавливает savedCenter при первой загрузке + отладка
-var CACHE_NAME = 'hospital-nav-v1031';
+// v1032: флаг userInteracted — карта прилипает к метке при первой загрузке, после ручного скролла сохраняет позицию
+var CACHE_NAME = 'hospital-nav-v1032';
 
 var PRECACHE = [
   './',

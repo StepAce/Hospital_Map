@@ -15,8 +15,9 @@ function debugLog(msg) {
 var deferredPrompt = null;
 var appData = null;
 var scale = 1;
-// Флаг первой загрузки: пока true, recalculateLayout не восстанавливает сохранённый центр
-var isInitialLoad = true;
+// Флаг ручного взаимодействия с картой: после первого touchstart/mousedown/wheel
+// перестаём принудительно центрировать карту на стартовой метке.
+var userInteracted = false;
 var allNodes = {};
 var graph = {};
 // Стартовая точка (откуда идём)
@@ -362,6 +363,13 @@ function initMap() {
     var img = document.getElementById('mapImage');
     scrollContainer = document.getElementById('mapScrollContainer');
 
+    var markInteracted = function() { userInteracted = true; };
+    if (scrollContainer) {
+        scrollContainer.addEventListener('touchstart', markInteracted, { passive: true });
+        scrollContainer.addEventListener('mousedown', markInteracted);
+        scrollContainer.addEventListener('wheel', markInteracted);
+    }
+
     return new Promise(function(resolve, reject) {
         var ready = false;
         function onReady() {
@@ -370,7 +378,6 @@ function initMap() {
             recalculateLayout();
             centerOnStartPoint();
             debugLog("После centerOnStartPoint. Скролл: X=" + scrollContainer.scrollLeft + ", Y=" + scrollContainer.scrollTop);
-            isInitialLoad = false;
             resolve();
         }
         img.onload = onReady;
@@ -1236,7 +1243,10 @@ function recalculateLayout() {
         var savedCenter = scrollContainer ? (scrollContainer.scrollLeft + scrollContainer.clientWidth / 2) / (scale || 1) : null;
         applyScale(isPanelOpen);
         repositionMarkers();
-        if (!isInitialLoad && scrollContainer && savedCenter !== null) {
+        if (startPoint && !lastRouteNodeIds && !userInteracted) {
+            debugLog("Прилипаем к метке (userInteracted=false)");
+            centerOnStartPoint();
+        } else if (scrollContainer && savedCenter !== null) {
             debugLog("Восстановление savedCenter: X=" + Math.round(savedCenter) + ", Y=" + scrollContainer.scrollTop);
             scrollContainer.scrollLeft = Math.max(0, savedCenter * scale - scrollContainer.clientWidth / 2);
         }
