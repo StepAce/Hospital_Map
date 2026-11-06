@@ -1,5 +1,5 @@
-// v1019: theme_color манифеста, viewport-fit=cover и safe-area для нижней системной панели
-var CACHE_NAME = 'hospital-nav-v1019';
+// v1021: theme_color белый — системная зона внизу сливается с белой нижней панелью
+var CACHE_NAME = 'hospital-nav-v1021';
 
 var PRECACHE = [
   './',
