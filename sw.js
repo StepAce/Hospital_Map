@@ -1,5 +1,5 @@
-// v1025: модалка display:none по умолчанию, отложенное центрирование карты, will-change у toast
-var CACHE_NAME = 'hospital-nav-v1025';
+// v1026: центрирование карты после полной загрузки ресурсов, recalculateLayout не сбрасывает скролл при выбранном startPoint
+var CACHE_NAME = 'hospital-nav-v1026';
 
 var PRECACHE = [
   './',

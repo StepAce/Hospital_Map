@@ -354,6 +354,7 @@ function initMap() {
     return new Promise(function(resolve, reject) {
         img.onload = function() {
             recalculateLayout();
+            centerOnStartPoint();
             resolve();
         };
         img.onerror = function() {
@@ -1215,7 +1216,11 @@ function recalculateLayout() {
         var savedCenter = scrollContainer ? (scrollContainer.scrollLeft + scrollContainer.clientWidth / 2) / (scale || 1) : null;
         applyScale(isPanelOpen);
         repositionMarkers();
-        if (scrollContainer && savedCenter !== null) {
+        // Если старт выбран и маршрут не строится — центрируемся на стартовой метке,
+        // а не восстанавливаем старое положение скролла (иначе карта улетает влево).
+        if (startPoint && !lastRouteNodeIds) {
+            centerOnStartPoint();
+        } else if (scrollContainer && savedCenter !== null) {
             scrollContainer.scrollLeft = Math.max(0, savedCenter * scale - scrollContainer.clientWidth / 2);
         }
         if (lastRouteNodeIds) {
@@ -1245,7 +1250,7 @@ function centerOnStartPoint() {
     if (!node) return;
     var centerX = node.x * scale;
     var halfView = scrollContainer.getBoundingClientRect().width / 2;
-    scrollContainer.scrollTo({ left: Math.max(0, centerX - halfView), behavior: 'smooth' });
+    scrollContainer.scrollTo({ left: Math.max(0, centerX - halfView), behavior: 'auto' });
 }
 
 // === ЗАПУСК ===
@@ -1317,6 +1322,20 @@ async function main() {
         recalculateLayout();
         centerOnStartPoint();
     }, 50);
+
+    // Финальное центрирование после полной загрузки всех ресурсов (картинка, шрифты).
+    function settleCenter() {
+        recalculateLayout();
+        centerOnStartPoint();
+    }
+    if (document.readyState === 'complete') {
+        setTimeout(settleCenter, 0);
+    } else {
+        window.addEventListener('load', settleCenter);
+    }
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(settleCenter);
+    }
 
 }
 
