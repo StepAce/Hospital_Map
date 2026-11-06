@@ -348,19 +348,25 @@ function findPathSnapped(fromX, fromY, toX, toY) {
 function initMap() {
     var cfg = appData.config;
     var img = document.getElementById('mapImage');
-    var wrapper = document.getElementById('mapWrapper');
     scrollContainer = document.getElementById('mapScrollContainer');
 
     return new Promise(function(resolve, reject) {
-        img.onload = function() {
+        var ready = false;
+        function onReady() {
+            if (ready) return;
+            ready = true;
             recalculateLayout();
             centerOnStartPoint();
             resolve();
-        };
+        }
+        img.onload = onReady;
         img.onerror = function() {
             reject(new Error('Не удалось загрузить изображение карты'));
         };
         img.src = (cfg && cfg.mapImage) || 'hospital-map.webp';
+        if (img.complete && img.naturalWidth) {
+            onReady();
+        }
     });
 }
 
@@ -1316,26 +1322,11 @@ async function main() {
     initWelcomeModal();
     // renderDebugOverlay();
 
-    // Отложенное центрирование: ждём, пока DOM получит финальные размеры,
-    // иначе карта скроллится не туда (булавка улетает влево).
-    setTimeout(function() {
-        recalculateLayout();
-        centerOnStartPoint();
-    }, 50);
-
-    // Финальное центрирование после полной загрузки всех ресурсов (картинка, шрифты).
-    function settleCenter() {
-        recalculateLayout();
-        centerOnStartPoint();
-    }
-    if (document.readyState === 'complete') {
-        setTimeout(settleCenter, 0);
-    } else {
-        window.addEventListener('load', settleCenter);
-    }
-    if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(settleCenter);
-    }
+    // Карта отцентрирована внутри img.onload — плавно убираем прелоадер и показываем карту.
+    var preloader = document.getElementById('preloader');
+    var mapWrapperEl = document.getElementById('mapWrapper');
+    if (preloader) preloader.classList.add('hidden');
+    if (mapWrapperEl) mapWrapperEl.classList.add('map-ready');
 
 }
 
@@ -1401,6 +1392,8 @@ document.getElementById('installBtn').addEventListener('click', function() {
 
 // === ЗАПУСК ПРИЛОЖЕНИЯ ===
 main().catch(function(err) {
+    var preloader = document.getElementById('preloader');
+    if (preloader) preloader.classList.add('hidden');
     if (err.message.indexOf('Не удалось загрузить') !== -1 || !navigator.onLine) {
         var offlineNotice = document.getElementById('offlineNotice');
         if (offlineNotice) offlineNotice.style.display = 'block';
