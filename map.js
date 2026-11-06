@@ -378,7 +378,14 @@ function initMap() {
             recalculateLayout();
             centerOnStartPoint();
             debugLog("После centerOnStartPoint. Скролл: X=" + scrollContainer.scrollLeft + ", Y=" + scrollContainer.scrollTop);
-            resolve();
+            var decodePromise = (img.decode && typeof img.decode === 'function') ? img.decode() : Promise.resolve();
+            decodePromise.then(function() {
+                debugLog("Картинка декодирована (decode)");
+                resolve();
+            }).catch(function() {
+                debugLog("decode не поддерживается или ошибка, продолжаем");
+                resolve();
+            });
         }
         img.onload = onReady;
         img.onerror = function() {
@@ -409,6 +416,7 @@ function applyScale(forceWidthMode) {
         var ml = document.getElementById('markersLayer');
         ml.style.width = naturalWidth + 'px';
         ml.style.height = naturalHeight + 'px';
+        debugLog("applyScale: scale=" + scale);
         return;
     }
     var sp = allNodes[startPoint.id];
@@ -436,6 +444,7 @@ function applyScale(forceWidthMode) {
     var markersLayer = document.getElementById('markersLayer');
     markersLayer.style.width = totalWidth + 'px';
     markersLayer.style.height = totalHeight + 'px';
+    debugLog("applyScale: scale=" + scale);
 }
 
 function getAvailableHeight() {
@@ -1261,7 +1270,7 @@ function recalculateLayout() {
 function setupResizeHandler() {
     var resizeTimeout;
     function onResize() {
-        debugLog("Resize! Текущий скролл: X=" + (scrollContainer ? scrollContainer.scrollLeft : 'null') + ", Y=" + (scrollContainer ? scrollContainer.scrollTop : 'null'));
+        debugLog("RESIZE: ширина=" + window.innerWidth + ", высота=" + window.innerHeight + ", скроллX=" + (scrollContainer ? scrollContainer.scrollLeft : 'null'));
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(recalculateLayout, 200);
     }
@@ -1278,6 +1287,7 @@ function centerOnStartPoint() {
     if (!node) return;
     var centerX = node.x * scale;
     var halfView = scrollContainer.getBoundingClientRect().width / 2;
+    debugLog("centerOnStartPoint: X=" + Math.round(centerX) + ", scrollLeft=" + Math.round(Math.max(0, centerX - halfView)));
     scrollContainer.scrollTo({ left: Math.max(0, centerX - halfView), behavior: 'auto' });
 }
 
@@ -1347,7 +1357,9 @@ async function main() {
     // Карта отцентрирована внутри img.onload — плавно убираем прелоадер и показываем карту.
     var preloader = document.getElementById('preloader');
     var mapWrapperEl = document.getElementById('mapWrapper');
+    debugLog("Скрываем прелоадер");
     if (preloader) preloader.classList.add('hidden');
+    debugLog("Добавлен map-ready, карта появляется");
     if (mapWrapperEl) mapWrapperEl.classList.add('map-ready');
 
 }

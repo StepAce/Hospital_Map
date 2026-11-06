@@ -1,5 +1,5 @@
-// v1032: флаг userInteracted — карта прилипает к метке при первой загрузке, после ручного скролла сохраняет позицию
-var CACHE_NAME = 'hospital-nav-v1032';
+// v1034: расширенная отладка + img.decode() перед показом карты
+var CACHE_NAME = 'hospital-nav-v1034';
 
 var PRECACHE = [
   './',
