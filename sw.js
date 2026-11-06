@@ -1,5 +1,5 @@
-// v1035: карта показывается мгновенно через visibility, форс-reflow перед показом, центрирование только в initMap
-var CACHE_NAME = 'hospital-nav-v1035';
+// v1036: убрана авто-перезагрузка при первом controllerchange (первый заход/инкогнито), чистка отладочного кода
+var CACHE_NAME = 'hospital-nav-v1036';
 
 var PRECACHE = [
   './',

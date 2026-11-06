@@ -1,16 +1,6 @@
 // map.js — логика карты и маршрутов
 'use strict';
 
-// Отладочный лог на экран (для диагностики на телефоне без консоли)
-function debugLog(msg) {
-    var el = document.getElementById('debug-log');
-    if (!el) return;
-    var line = document.createElement('div');
-    line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
-    el.appendChild(line);
-    el.scrollTop = el.scrollHeight;
-}
-
 // === СОСТОЯНИЕ ===
 var deferredPrompt = null;
 var appData = null;
@@ -367,13 +357,10 @@ function initMap() {
             ready = true;
             recalculateLayout();
             centerOnStartPoint();
-            debugLog("После centerOnStartPoint. Скролл: X=" + scrollContainer.scrollLeft + ", Y=" + scrollContainer.scrollTop);
             var decodePromise = (img.decode && typeof img.decode === 'function') ? img.decode() : Promise.resolve();
             decodePromise.then(function() {
-                debugLog("Картинка декодирована (decode)");
                 resolve();
             }).catch(function() {
-                debugLog("decode не поддерживается или ошибка, продолжаем");
                 resolve();
             });
         }
@@ -406,7 +393,6 @@ function applyScale(forceWidthMode) {
         var ml = document.getElementById('markersLayer');
         ml.style.width = naturalWidth + 'px';
         ml.style.height = naturalHeight + 'px';
-        debugLog("applyScale: scale=" + scale);
         return;
     }
     var sp = allNodes[startPoint.id];
@@ -434,7 +420,6 @@ function applyScale(forceWidthMode) {
     var markersLayer = document.getElementById('markersLayer');
     markersLayer.style.width = totalWidth + 'px';
     markersLayer.style.height = totalHeight + 'px';
-    debugLog("applyScale: scale=" + scale);
 }
 
 function getAvailableHeight() {
@@ -1243,7 +1228,6 @@ function recalculateLayout() {
         applyScale(isPanelOpen);
         repositionMarkers();
         if (scrollContainer && savedCenter !== null) {
-            debugLog("Восстановление savedCenter: X=" + Math.round(savedCenter) + ", Y=" + scrollContainer.scrollTop);
             scrollContainer.scrollLeft = Math.max(0, savedCenter * scale - scrollContainer.clientWidth / 2);
         }
         if (lastRouteNodeIds) {
@@ -1257,7 +1241,6 @@ function recalculateLayout() {
 function setupResizeHandler() {
     var resizeTimeout;
     function onResize() {
-        debugLog("RESIZE: ширина=" + window.innerWidth + ", высота=" + window.innerHeight + ", скроллX=" + (scrollContainer ? scrollContainer.scrollLeft : 'null'));
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(recalculateLayout, 200);
     }
@@ -1274,7 +1257,6 @@ function centerOnStartPoint() {
     if (!node) return;
     var centerX = node.x * scale;
     var halfView = scrollContainer.getBoundingClientRect().width / 2;
-    debugLog("centerOnStartPoint: X=" + Math.round(centerX) + ", scrollLeft=" + Math.round(Math.max(0, centerX - halfView)));
     scrollContainer.scrollTo({ left: Math.max(0, centerX - halfView), behavior: 'auto' });
 }
 
@@ -1346,9 +1328,7 @@ async function main() {
     var preloader = document.getElementById('preloader');
     var mapWrapperEl = document.getElementById('mapWrapper');
     if (mapWrapperEl) void mapWrapperEl.offsetHeight;
-    debugLog("Скрываем прелоадер");
     if (preloader) preloader.classList.add('hidden');
-    debugLog("Добавлен map-ready, карта появляется");
     if (mapWrapperEl) mapWrapperEl.classList.add('map-ready');
 
 }
@@ -1425,6 +1405,9 @@ main().catch(function(err) {
 });
 
 if ('serviceWorker' in navigator) {
+    // Флаг: была ли страница под управлением старого SW до этой загрузки.
+    // Если нет (первый заход / инкогнито), перезагрузку при controllerchange не делаем.
+    var wasControlled = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.register('sw.js')
         .then(function(reg) {
             console.log('SW registered:', reg.scope);
@@ -1443,7 +1426,9 @@ if ('serviceWorker' in navigator) {
         })
         .catch(function(err) { console.warn('SW registration failed:', err); });
     navigator.serviceWorker.addEventListener('controllerchange', function() {
-        window.location.reload();
+        if (wasControlled) {
+            window.location.reload();
+        }
     });
 }
 
