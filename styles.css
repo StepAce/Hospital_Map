@@ -124,11 +124,10 @@ body {
     position: relative;
     background: #1a1a2e;
     width: 100%;
-    opacity: 0;
-    transition: opacity 0.4s ease;
+    visibility: hidden;
 }
 .map-wrapper.map-ready {
-    opacity: 1;
+    visibility: visible;
 }
 .map-scroll-container {
     width: 100%;

@@ -1,5 +1,5 @@
-// v1034: расширенная отладка + img.decode() перед показом карты
-var CACHE_NAME = 'hospital-nav-v1034';
+// v1035: карта показывается мгновенно через visibility, форс-reflow перед показом, центрирование только в initMap
+var CACHE_NAME = 'hospital-nav-v1035';
 
 var PRECACHE = [
   './',

@@ -15,9 +15,6 @@ function debugLog(msg) {
 var deferredPrompt = null;
 var appData = null;
 var scale = 1;
-// Флаг ручного взаимодействия с картой: после первого touchstart/mousedown/wheel
-// перестаём принудительно центрировать карту на стартовой метке.
-var userInteracted = false;
 var allNodes = {};
 var graph = {};
 // Стартовая точка (откуда идём)
@@ -362,13 +359,6 @@ function initMap() {
     var cfg = appData.config;
     var img = document.getElementById('mapImage');
     scrollContainer = document.getElementById('mapScrollContainer');
-
-    var markInteracted = function() { userInteracted = true; };
-    if (scrollContainer) {
-        scrollContainer.addEventListener('touchstart', markInteracted, { passive: true });
-        scrollContainer.addEventListener('mousedown', markInteracted);
-        scrollContainer.addEventListener('wheel', markInteracted);
-    }
 
     return new Promise(function(resolve, reject) {
         var ready = false;
@@ -1252,10 +1242,7 @@ function recalculateLayout() {
         var savedCenter = scrollContainer ? (scrollContainer.scrollLeft + scrollContainer.clientWidth / 2) / (scale || 1) : null;
         applyScale(isPanelOpen);
         repositionMarkers();
-        if (startPoint && !lastRouteNodeIds && !userInteracted) {
-            debugLog("Прилипаем к метке (userInteracted=false)");
-            centerOnStartPoint();
-        } else if (scrollContainer && savedCenter !== null) {
+        if (scrollContainer && savedCenter !== null) {
             debugLog("Восстановление savedCenter: X=" + Math.round(savedCenter) + ", Y=" + scrollContainer.scrollTop);
             scrollContainer.scrollLeft = Math.max(0, savedCenter * scale - scrollContainer.clientWidth / 2);
         }
@@ -1354,9 +1341,11 @@ async function main() {
     initWelcomeModal();
     // renderDebugOverlay();
 
-    // Карта отцентрирована внутри img.onload — плавно убираем прелоадер и показываем карту.
+    // Карта отцентрирована внутри img.onload — принудительно применяем раскладку
+    // и мгновенно показываем карту (без анимации, чтобы телефон не «захлёбывался»).
     var preloader = document.getElementById('preloader');
     var mapWrapperEl = document.getElementById('mapWrapper');
+    if (mapWrapperEl) void mapWrapperEl.offsetHeight;
     debugLog("Скрываем прелоадер");
     if (preloader) preloader.classList.add('hidden');
     debugLog("Добавлен map-ready, карта появляется");
