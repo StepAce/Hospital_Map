@@ -1301,7 +1301,6 @@ async function main() {
         }
     } catch(e) { console.error('initParams error:', e); }
     await initMap();
-    centerOnStartPoint();
     renderMarkers();
     renderLabels();
     updateActiveStartLabel();
@@ -1311,6 +1310,13 @@ async function main() {
     setupResizeHandler();
     initWelcomeModal();
     // renderDebugOverlay();
+
+    // Отложенное центрирование: ждём, пока DOM получит финальные размеры,
+    // иначе карта скроллится не туда (булавка улетает влево).
+    setTimeout(function() {
+        recalculateLayout();
+        centerOnStartPoint();
+    }, 50);
 
 }
 

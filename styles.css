@@ -520,7 +520,7 @@ body.panel-open .start-label {
     top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(26, 26, 46, 0.85);
     z-index: 10000;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     animation: fadeIn 0.3s ease;
@@ -657,6 +657,7 @@ body.panel-open .start-label {
     opacity: 0;
     pointer-events: none;
     z-index: 9000;
+    will-change: transform, opacity;
     transition: opacity 0.25s ease, transform 0.25s ease;
 }
 .toast.show {

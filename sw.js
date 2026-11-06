@@ -1,5 +1,5 @@
-// v1023: гарантированное скрытие welcome-модалки при QR-переходе + светлый toast в стиле приложения
-var CACHE_NAME = 'hospital-nav-v1023';
+// v1025: модалка display:none по умолчанию, отложенное центрирование карты, will-change у toast
+var CACHE_NAME = 'hospital-nav-v1025';
 
 var PRECACHE = [
   './',
