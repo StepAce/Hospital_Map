@@ -1,5 +1,5 @@
-// v1030: recalculateLayout больше не центрирует карту, debounce resize 200мс, центрирование только в img.onload
-var CACHE_NAME = 'hospital-nav-v1030';
+// v1031: флаг isInitialLoad — recalculateLayout не восстанавливает savedCenter при первой загрузке + отладка
+var CACHE_NAME = 'hospital-nav-v1031';
 
 var PRECACHE = [
   './',

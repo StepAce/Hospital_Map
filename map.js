@@ -1,10 +1,22 @@
 // map.js — логика карты и маршрутов
 'use strict';
 
+// Отладочный лог на экран (для диагностики на телефоне без консоли)
+function debugLog(msg) {
+    var el = document.getElementById('debug-log');
+    if (!el) return;
+    var line = document.createElement('div');
+    line.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+    el.appendChild(line);
+    el.scrollTop = el.scrollHeight;
+}
+
 // === СОСТОЯНИЕ ===
 var deferredPrompt = null;
 var appData = null;
 var scale = 1;
+// Флаг первой загрузки: пока true, recalculateLayout не восстанавливает сохранённый центр
+var isInitialLoad = true;
 var allNodes = {};
 var graph = {};
 // Стартовая точка (откуда идём)
@@ -357,6 +369,8 @@ function initMap() {
             ready = true;
             recalculateLayout();
             centerOnStartPoint();
+            debugLog("После centerOnStartPoint. Скролл: X=" + scrollContainer.scrollLeft + ", Y=" + scrollContainer.scrollTop);
+            isInitialLoad = false;
             resolve();
         }
         img.onload = onReady;
@@ -1222,7 +1236,8 @@ function recalculateLayout() {
         var savedCenter = scrollContainer ? (scrollContainer.scrollLeft + scrollContainer.clientWidth / 2) / (scale || 1) : null;
         applyScale(isPanelOpen);
         repositionMarkers();
-        if (scrollContainer && savedCenter !== null) {
+        if (!isInitialLoad && scrollContainer && savedCenter !== null) {
+            debugLog("Восстановление savedCenter: X=" + Math.round(savedCenter) + ", Y=" + scrollContainer.scrollTop);
             scrollContainer.scrollLeft = Math.max(0, savedCenter * scale - scrollContainer.clientWidth / 2);
         }
         if (lastRouteNodeIds) {
@@ -1236,6 +1251,7 @@ function recalculateLayout() {
 function setupResizeHandler() {
     var resizeTimeout;
     function onResize() {
+        debugLog("Resize! Текущий скролл: X=" + (scrollContainer ? scrollContainer.scrollLeft : 'null') + ", Y=" + (scrollContainer ? scrollContainer.scrollTop : 'null'));
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(recalculateLayout, 200);
     }
